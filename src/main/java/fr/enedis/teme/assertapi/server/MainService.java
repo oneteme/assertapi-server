@@ -1,8 +1,11 @@
 package fr.enedis.teme.assertapi.server;
 
 import static java.lang.String.join;
+import static java.sql.Timestamp.from;
+import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.Optional.ofNullable;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,6 +15,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import fr.enedis.teme.assertapi.core.ApiAssertionsResult;
 import fr.enedis.teme.assertapi.core.HttpQuery;
 import fr.enedis.teme.assertapi.core.HttpRequest;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +25,18 @@ import lombok.RequiredArgsConstructor;
 public class MainService {
 
 	private final JdbcTemplate template;
+	
+	public void trace(Instant instant, ApiAssertionsResult result) {
+		
+		var q = "INSERT INTO TEST_RES(DH_RUN, VA_EXT_URL, VA_ACT_URL, VA_STT, VA_STP) VALUES(?,?,?,?,?)";
+		template.update(q, ps-> {
+			ps.setTimestamp(1, from(instant.truncatedTo(MILLIS)));
+			ps.setString(2, result.expectedUrl());
+			ps.setString(3, result.actualUrl());
+			ps.setString(4, result.getStatus().toString());
+			ps.setString(5, result.getStep() == null ? null : result.getStep().toString());
+		});
+	}
 	
 	public List<HttpQuery> data(String app, String env) {
 		
@@ -40,7 +56,7 @@ public class MainService {
 			q += " AND VA_API_ENV=?";
 			args.add(env);
 		}
-		return template.query(q, args.toArray(), (rs, i)->{
+		return template.query(q, args.toArray(), (rs, i)-> {
 			HttpQuery hq = new HttpQuery();
 			hq.setDescription(rs.getString("VA_TST_DSC"));
 			hq.setParallel(rs.getBoolean("VA_TST_PRL"));

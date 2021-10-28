@@ -1,27 +1,29 @@
 package fr.enedis.teme.assertapi.server;
 
-import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
-
+import java.time.Instant;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import fr.enedis.teme.assertapi.core.ApiAssertionsFactory;
+import fr.enedis.teme.assertapi.core.ApiAssertionsResult;
 import fr.enedis.teme.assertapi.core.HttpQuery;
 import lombok.RequiredArgsConstructor;
 
 @CrossOrigin
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(value = "/v1/test/api", produces = APPLICATION_JSON_VALUE)
+@RequestMapping("/v1/test/api")
 public class MainController {
 	
 	private final MainService service;
@@ -58,8 +60,13 @@ public class MainController {
 		service.delete(new int[] {id});
 	}
 
+	@PutMapping("trace")
+	public void trace(@RequestBody ApiAssertionsResult result) {
+		service.trace(Instant.now(), result);
+	}
 	
-	@RequestMapping("run")
+	
+	@GetMapping("run")
 	public void run(
 			@RequestParam(name="app", required = false) String app,
 			@RequestParam(name="env", required = false) String env,
@@ -69,6 +76,7 @@ public class MainController {
 		var assertions = new ApiAssertionsFactory()
 //				.comparing(null, null)
 				.using(new DefaultResponseComparator())
+				.trace(this::trace)
 				.build();
 		for(var q : list) {
 			try {
