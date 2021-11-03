@@ -51,7 +51,7 @@ public final class DefaultResponseComparator implements ResponseComparator {
 
 	@Override
 	public void assertContentType(MediaType expectedContentType, MediaType actualContentType) {
-		if(expectedContentType != actualContentType) {
+		if(!Objects.equals(expectedContentType, actualContentType)) {
 			throw new RuntimeException();
 		}
 	}
@@ -76,4 +76,5 @@ public final class DefaultResponseComparator implements ResponseComparator {
 			throw new RuntimeException();
 		}
 	}
+	
 }
