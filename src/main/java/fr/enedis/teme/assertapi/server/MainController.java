@@ -1,7 +1,10 @@
 package fr.enedis.teme.assertapi.server;
 
 import java.time.Instant;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -14,10 +17,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+
 import fr.enedis.teme.assertapi.core.ApiAssertionsFactory;
 import fr.enedis.teme.assertapi.core.ApiAssertionsResult;
 import fr.enedis.teme.assertapi.core.HttpQuery;
 import fr.enedis.teme.assertapi.core.ServerConfig;
+import fr.enedis.teme.assertapi.core.TestStatus;
+import fr.enedis.teme.assertapi.core.TestStep;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -68,18 +76,22 @@ public class MainController {
 		service.trace(Instant.now(), result);
 	}
 	
+	
 	@PostMapping("run")
-	public void run(
+	public Object run(
 			@RequestParam(name="app", required = false) String app,
 			@RequestParam(name="env", required = false) String env,
 			@RequestParam(name="trace", defaultValue = "true") boolean trace,
 			@RequestBody Configuration config) {
 		
+		Consumer<ApiAssertionsResult> consumer = this::trace;
+		List<ApiAssertionsResult> res = new LinkedList<>();
+		
 		var list = queries(app, env);
 		var assertions = new ApiAssertionsFactory()
 				.comparing(config.getRefer(), config.getTarget())
 				.using(new DefaultResponseComparator())
-				.trace(this::trace)
+				.trace(consumer.andThen(res::add))
 				.build();
 		for(var q : list) {
 			try {
@@ -91,6 +103,7 @@ public class MainController {
 				log.error("assertion fail", e);
 			}
 		}
+		return res.stream().map(Result::of).collect(Collectors.toList());
 	}
 	
 	
@@ -100,6 +113,22 @@ public class MainController {
 		
 		private final ServerConfig refer;
 		private final ServerConfig target;
+	}
+	
+
+	@Getter
+	@JsonInclude(Include.NON_NULL)
+	@RequiredArgsConstructor
+	public static final class Result {
+
+		private final String uri;
+		private final TestStatus status;
+		private final TestStep step;
+		
+		public static Result of(ApiAssertionsResult r) {
+			return new Result(r.getQuery().getActual().toString(), r.getStatus(), r.getStep());
+		}
+		
 	}
 	
 }
