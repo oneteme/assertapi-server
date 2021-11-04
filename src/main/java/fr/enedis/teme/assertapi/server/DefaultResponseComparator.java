@@ -24,9 +24,9 @@ public final class DefaultResponseComparator implements ResponseComparator {
 		try {
 			return supp.get();
 		} catch(RestClientResponseException e) {
-			throw new RuntimeException(e);
+			throw new RuntimeException("Actual response exception", e);
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+			throw new RuntimeException("Uncatched exception", e);
 		}
 	}
 
@@ -34,46 +34,46 @@ public final class DefaultResponseComparator implements ResponseComparator {
 	public RestClientResponseException assertResponseException(SafeSupplier<?> supp) {
 		try {
 			supp.get();
-			throw new RuntimeException();
 		} catch(RestClientResponseException e) {
 			return e;
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+			throw new RuntimeException("Uncatched exception", e);
 		}
+		throw new RuntimeException("Expected response exception");
 	}
 
 	@Override
 	public void assertStatusCode(int expectedStatusCode, int actualStatusCode) {
 		if(expectedStatusCode != actualStatusCode) {
-			throw new RuntimeException();
+			throw new RuntimeException("Status code");
 		}
 	}
 
 	@Override
 	public void assertContentType(MediaType expectedContentType, MediaType actualContentType) {
 		if(!Objects.equals(expectedContentType, actualContentType)) {
-			throw new RuntimeException();
+			throw new RuntimeException("Content Type");
 		}
 	}
 
 	@Override
 	public void assertByteContent(byte[] expectedContent, byte[] actualContent) {
 		if(!Arrays.equals(expectedContent, actualContent)) {
-			throw new RuntimeException();
+			throw new RuntimeException("Response content");
 		}
 	}
 
 	@Override
 	public void assertTextContent(String expectedContent, String actualContent) {
 		if(!Objects.equals(expectedContent, actualContent)) {
-			throw new RuntimeException();
+			throw new RuntimeException("Response content");
 		}
 	}
 
 	@Override
 	public void assertJsonCompareResut(JSONCompareResult res) {
 		if(res.failed()) {
-			throw new RuntimeException();
+			throw new RuntimeException("not equal " + res.getMessage());
 		}
 	}
 	

@@ -55,6 +55,12 @@ public class MainController {
 		service.insert(app, env, query.build());
 	}
 	
+	@DeleteMapping
+	public void delete(@RequestParam("id") int[] ids) {
+		service.delete(ids);
+	}
+
+	
 	@PatchMapping("enable")
 	public void enable(@RequestParam("id") int[] ids) {
 		service.state(ids, true);
@@ -65,11 +71,6 @@ public class MainController {
 		service.state(ids, false);
 	}
 	
-	@DeleteMapping("delete")
-	public void delete(@RequestParam("id") int[] ids) {
-		service.delete(ids);
-	}
-
 	@PutMapping("trace")
 	public void trace(@RequestBody ApiAssertionsResult result) {
 		service.trace(singleton(result));
@@ -83,13 +84,13 @@ public class MainController {
 			@RequestParam(name="trace", defaultValue = "true") boolean trace,
 			@RequestBody Configuration config) {
 		
-		List<ApiAssertionsResult> res = new LinkedList<>();
+		List<ApiAssertionsResult> results = new LinkedList<>();
 		
 		var list = queries(app, env);
 		var assertions = new ApiAssertionsFactory()
 				.comparing(config.getRefer(), config.getTarget())
 				.using(new DefaultResponseComparator())
-				.trace(res::add)
+				.trace(results::add)
 				.build();
 		for(var q : list) {
 			try {
@@ -103,13 +104,13 @@ public class MainController {
 		}
 		if(trace) {
 			try {//silent trace
-				service.trace(res);
+				service.trace(results);
 			}
 			catch(Exception e) {
 				log.error("error while saving results", e);
 			}
 		}
-		return res.stream()
+		return results.stream()
 				.map(Result::of)
 				.collect(Collectors.toList());
 	}
