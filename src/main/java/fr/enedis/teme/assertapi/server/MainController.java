@@ -1,15 +1,14 @@
 package fr.enedis.teme.assertapi.server;
 
-import java.time.Instant;
+import static java.util.Collections.singleton;
+
 import java.util.LinkedList;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,7 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/v1/test/api")
 public class MainController {
 	
-	private final MainService service;
+	private final DataPersister service;
 
 	@RequestMapping
 	public List<HttpQuery> queries(
@@ -56,24 +55,24 @@ public class MainController {
 		service.insert(app, env, query.build());
 	}
 	
-	@PatchMapping("{id}/enable")
-	public void enable(@PathVariable("id") int id) {
-		service.state(new int[] {id}, true);
+	@PatchMapping("enable")
+	public void enable(@RequestParam("id") int[] ids) {
+		service.state(ids, true);
 	}
 	
-	@PatchMapping("{id}/disable")
-	public void disable(@PathVariable("id") int id) {
-		service.state(new int[] {id}, false);
+	@PatchMapping("disable")
+	public void disable(@RequestParam("id") int[] ids) {
+		service.state(ids, false);
 	}
 	
-	@DeleteMapping("{id}/delete")
-	public void delete(@PathVariable("id") int id) {
-		service.delete(new int[] {id});
+	@DeleteMapping("delete")
+	public void delete(@RequestParam("id") int[] ids) {
+		service.delete(ids);
 	}
 
 	@PutMapping("trace")
 	public void trace(@RequestBody ApiAssertionsResult result) {
-		service.trace(Instant.now(), result);
+		service.trace(singleton(result));
 	}
 	
 	
@@ -84,14 +83,13 @@ public class MainController {
 			@RequestParam(name="trace", defaultValue = "true") boolean trace,
 			@RequestBody Configuration config) {
 		
-		Consumer<ApiAssertionsResult> consumer = this::trace;
 		List<ApiAssertionsResult> res = new LinkedList<>();
 		
 		var list = queries(app, env);
 		var assertions = new ApiAssertionsFactory()
 				.comparing(config.getRefer(), config.getTarget())
 				.using(new DefaultResponseComparator())
-				.trace(consumer.andThen(res::add))
+				.trace(res::add)
 				.build();
 		for(var q : list) {
 			try {
@@ -103,9 +101,16 @@ public class MainController {
 				log.error("assertion fail", e);
 			}
 		}
-		return res.stream().map(Result::of).collect(Collectors.toList());
+		try {//silent trace
+			service.trace(res);
+		}
+		catch(Exception e) {
+			log.error("error while saving results", e);
+		}
+		return res.stream()
+				.map(Result::of)
+				.collect(Collectors.toList());
 	}
-	
 	
 	@Getter
 	@RequiredArgsConstructor
@@ -115,7 +120,6 @@ public class MainController {
 		private final ServerConfig target;
 	}
 	
-
 	@Getter
 	@JsonInclude(Include.NON_NULL)
 	@RequiredArgsConstructor

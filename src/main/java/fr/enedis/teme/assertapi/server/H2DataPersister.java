@@ -3,10 +3,12 @@ package fr.enedis.teme.assertapi.server;
 import static java.lang.String.join;
 import static java.sql.Timestamp.from;
 import static java.time.temporal.ChronoUnit.MILLIS;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -22,22 +24,11 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class MainService {
+public class H2DataPersister implements DataPersister {
 
 	private final JdbcTemplate template;
 	
-	public void trace(Instant instant, ApiAssertionsResult result) {
-		
-		var q = "INSERT INTO TEST_RES(DH_RUN, VA_EXT_URL, VA_ACT_URL, VA_STT, VA_STP) VALUES(?,?,?,?,?)";
-		template.update(q, ps-> {
-			ps.setTimestamp(1, from(instant.truncatedTo(MILLIS)));
-			ps.setString(2, result.expectedUrl());
-			ps.setString(3, result.actualUrl());
-			ps.setString(4, result.getStatus().toString());
-			ps.setString(5, result.getStep() == null ? null : result.getStep().toString());
-		});
-	}
-	
+	@Override
 	public List<HttpQuery> data(String app, String env) {
 		
 		List<Object> args = new ArrayList<>();
@@ -80,6 +71,7 @@ public class MainService {
 		};
 	}
 
+	@Override
 	@Transactional(rollbackFor = Exception.class)
 	public void insert(String app, String env, HttpQuery query) {
 		
@@ -106,6 +98,7 @@ public class MainService {
 		});
 	}
 	
+	@Override
 	public void state(int[] id, boolean state){
 		
 		String q = "UPDATE API_TEST SET VA_TST_ENB = ? WHERE ID_TST IN" + inArgs(id.length);
@@ -117,7 +110,8 @@ public class MainService {
 		});
 	}
 	
-	void delete(int[] id){
+	@Override
+	public void delete(int[] id){
 		
 		String q = "DELETE FROM API_TEST WHERE ID_TST IN" + inArgs(id.length);
 		template.update(q, ps-> {
@@ -135,6 +129,20 @@ public class MainService {
 			ps.setString(4, o.getCharset());
 			ps.setString(5, o.getExcludePaths() == null ? null : join(",", o.getExcludePaths()));
 		};
+	}
+
+	@Override
+	public void trace(Collection<ApiAssertionsResult> list) {
+		requireNonNull(list);
+		var instant = Instant.now().truncatedTo(MILLIS);
+		var q = "INSERT INTO TEST_RES(DH_RUN, VA_EXT_URL, VA_ACT_URL, VA_STT, VA_STP) VALUES(?,?,?,?,?)";
+		template.batchUpdate(q, list, list.size(), (ps, result)-> {
+			ps.setTimestamp(1, from(instant));
+			ps.setString(2, result.expectedUrl());
+			ps.setString(3, result.actualUrl());
+			ps.setString(4, result.getStatus().toString());
+			ps.setString(5, result.getStep() == null ? null : result.getStep().toString());
+		});
 	}
 	
 	private int nextId(String col, String table) {
