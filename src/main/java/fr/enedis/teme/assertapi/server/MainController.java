@@ -1,5 +1,6 @@
 package fr.enedis.teme.assertapi.server;
 
+import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static java.util.Collections.singleton;
 
 import java.util.LinkedList;
@@ -101,11 +102,13 @@ public class MainController {
 				log.error("assertion fail", e);
 			}
 		}
-		try {//silent trace
-			service.trace(res);
-		}
-		catch(Exception e) {
-			log.error("error while saving results", e);
+		if(trace) {
+			try {//silent trace
+				service.trace(res);
+			}
+			catch(Exception e) {
+				log.error("error while saving results", e);
+			}
 		}
 		return res.stream()
 				.map(Result::of)
@@ -121,7 +124,7 @@ public class MainController {
 	}
 	
 	@Getter
-	@JsonInclude(Include.NON_NULL)
+	@JsonInclude(NON_NULL)
 	@RequiredArgsConstructor
 	public static final class Result {
 
