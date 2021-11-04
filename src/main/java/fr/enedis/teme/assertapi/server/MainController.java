@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 import fr.enedis.teme.assertapi.core.ApiAssertionsFactory;
 import fr.enedis.teme.assertapi.core.ApiAssertionsResult;
@@ -133,7 +132,10 @@ public class MainController {
 		private final TestStep step;
 		
 		public static Result of(ApiAssertionsResult r) {
-			return new Result(r.getQuery().getActual().toString(), r.getStatus(), r.getStep());
+			return new Result(
+					r.getQuery().getActual().toString(), 
+					r.getStatus(), 
+					r.getStep());
 		}
 		
 	}
