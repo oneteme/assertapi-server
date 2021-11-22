@@ -16,5 +16,5 @@ public interface DataPersister {
 
 	void delete(int[] id);
 
-	void trace(Collection<ApiAssertionsResult> list);
+	void traceAll(Collection<ApiAssertionsResult> list);
 }

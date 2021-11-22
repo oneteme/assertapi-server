@@ -73,7 +73,7 @@ public class MainController {
 	
 	@PutMapping("trace")
 	public void trace(@RequestBody ApiAssertionsResult result) {
-		service.trace(singleton(result));
+		service.traceAll(singleton(result));
 	}
 	
 	
@@ -92,22 +92,23 @@ public class MainController {
 				.using(new DefaultResponseComparator())
 				.trace(results::add)
 				.build();
-		for(var q : list) {
+		
+		list.forEach(q-> {
 			try {
 				assertions.assertApi(q);
 				log.info("TEST {} OK", q);
 			}
-			catch(Exception e) {
+			catch(Throwable e) {
 				//fail
 				log.error("assertion fail", e);
 			}
-		}
+		});
 		if(trace) {
-			try {//silent trace
-				service.trace(results);
-			}
+			try {
+				service.traceAll(results);
+			}//silent trace
 			catch(Exception e) {
-				log.error("error while saving results", e);
+				log.error("error while tracing results", e);
 			}
 		}
 		return results.stream()

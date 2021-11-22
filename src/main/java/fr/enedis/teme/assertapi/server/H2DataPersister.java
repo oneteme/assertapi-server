@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import fr.enedis.teme.assertapi.core.ApiAssertionsResult;
 import fr.enedis.teme.assertapi.core.HttpQuery;
 import fr.enedis.teme.assertapi.core.HttpRequest;
+import fr.enedis.teme.assertapi.core.RequestOutput;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -32,9 +33,9 @@ public class H2DataPersister implements DataPersister {
 	public List<HttpQuery> data(String app, String env) {
 		
 		List<Object> args = new ArrayList<>();
-		String q  = "SELECT VA_TST_DSC,	VA_TST_PRL, VA_TST_STR,	VA_TST_ENB, VA_TST_DBG,"
+		String q  = "SELECT VA_TST_DSC, VA_TST_PRL, VA_TST_STR, VA_TST_ENB, VA_TST_DBG,"
 				+ " AC.ID_URI AS AC_ID, AC.VA_URI AS AC_URI, AC.VA_MTH AS AC_MTH, AC.VA_CHR AS AC_CHR, AC.VA_EXL AS AC_EXL,"
-				+ " EX.ID_URI AS EX_ID,	EX.VA_URI AS EX_URI, EX.VA_MTH AS EX_MTH, EX.VA_CHR AS EX_CHR, EX.VA_EXL AS EX_EXL"
+				+ " EX.ID_URI AS EX_ID, EX.VA_URI AS EX_URI, EX.VA_MTH AS EX_MTH, EX.VA_CHR AS EX_CHR, EX.VA_EXL AS EX_EXL"
 				+ " FROM API_TEST API"
 				+ " INNER JOIN HTTP_URI AC ON API.ID_URI_ACT = AC.ID_URI"
 				+ " INNER JOIN HTTP_URI EX ON API.ID_URI_EXT = EX.ID_URI"
@@ -48,7 +49,7 @@ public class H2DataPersister implements DataPersister {
 			args.add(env);
 		}
 		return template.query(q, args.toArray(), (rs, i)-> {
-			HttpQuery hq = new HttpQuery();
+			var hq = new HttpQuery();
 			hq.setDescription(rs.getString("VA_TST_DSC"));
 			hq.setParallel(rs.getBoolean("VA_TST_PRL"));
 			hq.setStrict (rs.getBoolean("VA_TST_STR"));
@@ -62,11 +63,13 @@ public class H2DataPersister implements DataPersister {
 	
 	private static RowMapper<HttpRequest> requestMapper(String prefix){
 		return (rs, i)->{
-			HttpRequest hr = new HttpRequest();
+			var hr = new HttpRequest();
 			hr.setUri(rs.getString(prefix + "_URI"));
 			hr.setMethod(rs.getString(prefix + "_MTH"));
-			hr.setCharset(rs.getString(prefix + "_CHR"));
-			hr.setExcludePaths(ofNullable(rs.getString(prefix + "_EXL")).map(v-> v.split(",")).orElse(null));
+			//add body & headers
+			hr.setOutput(new RequestOutput());
+			hr.getOutput().setCharset(rs.getString(prefix + "_CHR"));
+			hr.getOutput().setExcludePaths(ofNullable(rs.getString(prefix + "_EXL")).map(v-> v.split(",")).orElse(null));
 			return hr;
 		};
 	}
@@ -126,13 +129,13 @@ public class H2DataPersister implements DataPersister {
 			ps.setInt(1, id);
 			ps.setString(2, o.getUri());
 			ps.setString(3, o.getMethod());
-			ps.setString(4, o.getCharset());
-			ps.setString(5, o.getExcludePaths() == null ? null : join(",", o.getExcludePaths()));
+			ps.setString(4, o.getOutput().getCharset());
+			ps.setString(5, o.getOutput().getExcludePaths() == null ? null : join(",", o.getOutput().getExcludePaths()));
 		};
 	}
 
 	@Override
-	public void trace(Collection<ApiAssertionsResult> list) {
+	public void traceAll(Collection<ApiAssertionsResult> list) {
 		requireNonNull(list);
 		var instant = Instant.now().truncatedTo(MILLIS);
 		var q = "INSERT INTO TEST_RES(DH_RUN, VA_EXT_URL, VA_ACT_URL, VA_STT, VA_STP) VALUES(?,?,?,?,?)";
