@@ -52,7 +52,8 @@ public class MainController {
 			@RequestParam(name="env", required = false) String env,
 			@RequestBody HttpQuery query) {
 		
-		service.insert(app, env, query.build());
+		query.build();
+		service.insert(app, env, query);
 	}
 	
 	@DeleteMapping
