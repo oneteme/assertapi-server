@@ -4,13 +4,13 @@ import java.util.Collection;
 import java.util.List;
 
 import fr.enedis.teme.assertapi.core.ApiAssertionsResult;
-import fr.enedis.teme.assertapi.core.HttpQuery;
+import fr.enedis.teme.assertapi.core.ApiRequest;
 
 public interface DataPersister {
 
-	List<HttpQuery> data(String app, String env);
+	List<ApiRequest> data(String app, String env);
 
-	void insert(String app, String env, HttpQuery query);
+	void insert(String app, String env, ApiRequest query);
 
 	void state(int[] id, boolean state);
 

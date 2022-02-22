@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import fr.enedis.teme.assertapi.core.ApiAssertionsFactory;
 import fr.enedis.teme.assertapi.core.ApiAssertionsResult;
-import fr.enedis.teme.assertapi.core.HttpQuery;
+import fr.enedis.teme.assertapi.core.ApiRequest;
 import fr.enedis.teme.assertapi.core.ServerConfig;
 import fr.enedis.teme.assertapi.core.TestStatus;
 import fr.enedis.teme.assertapi.core.TestStep;
@@ -33,33 +33,32 @@ import lombok.extern.slf4j.Slf4j;
 @CrossOrigin
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/v1/test/api")
+@RequestMapping("/v1/assert/api")
 public class MainController {
 	
 	private final DataPersister service;
 
 	@RequestMapping
-	public List<HttpQuery> queries(
+	public List<ApiRequest> queries(
 			@RequestParam(name="app", required = false) String app,
 			@RequestParam(name="env", required = false) String env) {
 		
 		return service.data(app, env);
 	}
 	
-	@PostMapping
+	@PutMapping
 	public void query(
 			@RequestParam(name="app", required = false) String app,
 			@RequestParam(name="env", required = false) String env,
-			@RequestBody HttpQuery query) {
+			@RequestBody ApiRequest query) {
 		
-		service.insert(app, env, query.build());
+		service.insert(app, env, query);
 	}
 	
 	@DeleteMapping
 	public void delete(@RequestParam("id") int[] ids) {
 		service.delete(ids);
 	}
-
 	
 	@PatchMapping("enable")
 	public void enable(@RequestParam("id") int[] ids) {
@@ -135,7 +134,7 @@ public class MainController {
 		
 		public static Result of(ApiAssertionsResult r) {
 			return new Result(
-					r.getQuery().getActual().toString(), 
+					r.getQuery().toString(), 
 					r.getStatus(), 
 					r.getStep());
 		}
