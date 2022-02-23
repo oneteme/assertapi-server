@@ -1,30 +1,32 @@
 package fr.enedis.teme.assertapi.server;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static fr.enedis.teme.assertapi.core.AssertionContext.CTX;
+import static fr.enedis.teme.assertapi.core.AssertionContext.CTX_ID;
+import static fr.enedis.teme.assertapi.core.AssertionContext.buildContext;
+import static fr.enedis.teme.assertapi.core.AssertionContext.parseHeader;
 import static java.util.Collections.singleton;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import fr.enedis.teme.assertapi.core.ApiAssertionsFactory;
 import fr.enedis.teme.assertapi.core.ApiAssertionsResult;
 import fr.enedis.teme.assertapi.core.ApiRequest;
 import fr.enedis.teme.assertapi.core.ServerConfig;
-import fr.enedis.teme.assertapi.core.TestStatus;
-import fr.enedis.teme.assertapi.core.TestStep;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 public class MainController {
 	
 	private final DataPersister service;
+	private final ObjectMapper mapper;
 
 	@RequestMapping
 	public List<ApiRequest> queries(
@@ -70,11 +73,18 @@ public class MainController {
 		service.state(ids, false);
 	}
 	
-	@PutMapping("trace")
-	public void trace(@RequestBody ApiAssertionsResult result) {
-		service.traceAll(singleton(result));
+	
+	@GetMapping("trace")
+	public long register(@RequestHeader(CTX) String context) {
+		
+		return service.register(parseHeader(mapper, context));
 	}
 	
+	@PutMapping("trace")
+	public void trace(@RequestHeader(CTX_ID) long ctx, @RequestBody ApiAssertionsResult result) {
+		
+		service.traceAll(ctx, singleton(result));
+	}
 	
 	@PostMapping("run")
 	public Object run(
@@ -82,9 +92,9 @@ public class MainController {
 			@RequestParam(name="env", required = false) String env,
 			@RequestParam(name="trace", defaultValue = "true") boolean trace,
 			@RequestBody Configuration config) {
-		
+
+		var ctx = service.register(buildContext());
 		List<ApiAssertionsResult> results = new LinkedList<>();
-		
 		var list = queries(app, env);
 		var assertions = new ApiAssertionsFactory()
 				.comparing(config.getRefer(), config.getTarget())
@@ -104,15 +114,13 @@ public class MainController {
 		});
 		if(trace) {
 			try {
-				service.traceAll(results);
+				service.traceAll(ctx, results);
 			}//silent trace
 			catch(Exception e) {
 				log.error("error while tracing results", e);
 			}
 		}
-		return results.stream()
-				.map(Result::of)
-				.collect(Collectors.toList());
+		return results;
 	}
 	
 	@Getter
@@ -122,23 +130,5 @@ public class MainController {
 		private final ServerConfig refer;
 		private final ServerConfig target;
 	}
-	
-	@Getter
-	@JsonInclude(NON_NULL)
-	@RequiredArgsConstructor
-	public static final class Result {
-
-		private final String uri;
-		private final TestStatus status;
-		private final TestStep step;
 		
-		public static Result of(ApiAssertionsResult r) {
-			return new Result(
-					r.getQuery().toString(), 
-					r.getStatus(), 
-					r.getStep());
-		}
-		
-	}
-	
 }

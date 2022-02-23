@@ -1,14 +1,14 @@
 package fr.enedis.teme.assertapi.server;
 
-import static java.sql.Timestamp.from;
+import static java.lang.System.currentTimeMillis;
 import static java.sql.Types.BIGINT;
-import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -26,9 +26,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.enedis.teme.assertapi.core.ApiAssertionsResult;
 import fr.enedis.teme.assertapi.core.ApiRequest;
 import fr.enedis.teme.assertapi.core.AssertionConfig;
+import fr.enedis.teme.assertapi.core.AssertionContext;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StdDataPersister implements DataPersister {
@@ -131,24 +134,44 @@ public class StdDataPersister implements DataPersister {
 			}
 		});
 	}
+	
+	@Override
+	public long register(@NonNull AssertionContext ctx) {
+		
+		var id = currentTimeMillis();
+		var q = "INSERT INTO ASR_GRP(ID_ASR, VA_HST_USR, VA_HST_OS, VA_HST_ADR) VALUES(?,?,?,?)";
+		template.update(q, ps-> {
+			ps.setLong(1, id);
+			ps.setString(2, ctx.getUser());
+			ps.setString(3, ctx.getOs());
+			ps.setString(4, ctx.getAddress());
+		});
+		log.info("registered {} ==> {}", ctx, id);
+		return id;
+	}
 
 	@Override
-	public void traceAll(@NonNull Collection<ApiAssertionsResult> list) {
+	public void traceAll(long id, @NonNull Collection<ApiAssertionsResult> list) {
 		requireNonNull(list);
-		var instant = Instant.now().truncatedTo(MILLIS);
-		var q = "INSERT INTO API_ASR(ID_REQ, DH_ASR, VA_EXT_URL, VA_ACT_URL, VA_REQ_STT, VA_REQ_STP) VALUES(?,?,?,?,?,?)";
+		var q = "INSERT INTO ASR_REQ(ID_ASR, ID_REQ, VA_EXT_HST, VA_ACT_HST, "
+				+ "DH_EXT_STR, DH_EXT_END, DH_ACT_STR, DH_ACT_END, VA_REQ_STT, VA_REQ_STP) "
+				+ "VALUES(?,?,?,?,?,?,?,?,?,?)";
 		template.batchUpdate(q, list, list.size(), (ps, result)-> {
-			if(result.getQuery().getId() == null) {
-				ps.setNull(1, BIGINT);
+			ps.setLong(1, id);
+			if(result.getId() == null) {
+				ps.setNull(2, BIGINT);
 			}
 			else {				
-				ps.setLong(1, result.getQuery().getId());
+				ps.setLong(2, result.getId());
 			}
-			ps.setTimestamp(2, from(instant));
-			ps.setString(3, result.expectedUrl());
-			ps.setString(4, result.actualUrl());
-			ps.setString(5, result.getStatus().toString());
-			ps.setString(6, result.getStep() == null ? null : result.getStep().toString());
+			ps.setString(3, result.getExpExecution().getHost());
+			ps.setString(4, result.getActExecution().getHost());
+			ps.setTimestamp(5, ofEpochMilli(result.getExpExecution().getStart()));
+			ps.setTimestamp(6, ofEpochMilli(result.getExpExecution().getEnd()));
+			ps.setTimestamp(7, ofEpochMilli(result.getActExecution().getStart()));
+			ps.setTimestamp(8, ofEpochMilli(result.getActExecution().getEnd()));
+			ps.setString(9, result.getStatus().toString());
+			ps.setString(10, result.getStep() == null ? null : result.getStep().toString());
 		});
 	}
 	
@@ -159,6 +182,10 @@ public class StdDataPersister implements DataPersister {
 
 	private static String inArgs(int n) {
 		return "(" + (n == 1 ? "?" : "?" + ",?".repeat(n-1)) + ")";
+	}
+	
+	private static Timestamp ofEpochMilli(long v) {
+		return Timestamp.from(Instant.ofEpochMilli(v));
 	}
 
 	/**
