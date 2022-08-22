@@ -1,12 +1,10 @@
 package fr.enedis.teme.assertapi.server;
 
-import java.util.Collection;
 import java.util.List;
 
 import fr.enedis.teme.assertapi.core.ApiAssertionsResult;
 import fr.enedis.teme.assertapi.core.ApiRequest;
 import fr.enedis.teme.assertapi.core.AssertionContext;
-import lombok.NonNull;
 
 public interface DataPersister {
 
@@ -20,6 +18,6 @@ public interface DataPersister {
 
 	long register(AssertionContext ctx);
 
-	void traceAll(long id, @NonNull Collection<ApiAssertionsResult> list);
+	void trace(long id, ApiAssertionsResult list);
 
 }

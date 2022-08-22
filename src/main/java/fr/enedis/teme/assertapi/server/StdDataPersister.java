@@ -2,7 +2,6 @@ package fr.enedis.teme.assertapi.server;
 
 import static java.lang.System.currentTimeMillis;
 import static java.sql.Types.BIGINT;
-import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.sql.PreparedStatement;
@@ -10,7 +9,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +52,7 @@ public class StdDataPersister implements DataPersister {
 			q += " AND VA_API_ENV=?";
 			args.add(env);
 		}
-		return template.query(q, args.toArray(), (rs, i)-> {
+		var list = template.query(q, args.toArray(), (rs, i)-> {
 			ApiRequest req;
 			try {
 				var conf = new AssertionConfig(
@@ -78,11 +76,13 @@ public class StdDataPersister implements DataPersister {
 			req.setBody(rs.getString("VA_API_BDY"));
 			return req;
 		});
+		log.info("app={}, env={} ==> {} requests", app, env, list.size());
+		return list;
 	}
 	
 	@Override
 	@Transactional(rollbackFor = Exception.class)
-	public void insert(String app, String env, @NonNull ApiRequest query) {
+	public void insert(String app, String env, @NonNull ApiRequest req) {
 		
 		var q = "INSERT INTO API_REQ(ID_REQ, VA_API_URI, VA_API_MTH, VA_API_HDR, VA_API_BDY, VA_API_CHR, "
 				+ "VA_API_NME, VA_API_DSC, VA_API_APP, VA_API_ENV, "
@@ -92,30 +92,31 @@ public class StdDataPersister implements DataPersister {
 		template.update(q, ps-> {
 			try {
 				ps.setLong(1, next);
-				ps.setString(2, query.getUri());
-				ps.setString(3, query.getMethod());
-				ps.setString(4, mapper.writeValueAsString(query.getHeaders()));
-				ps.setString(5, query.getBody());
-				ps.setString(6, query.getCharset());
-				ps.setString(7, query.getName());
-				ps.setString(8, query.getDescription());
+				ps.setString(2, req.getUri());
+				ps.setString(3, req.getMethod());
+				ps.setString(4, mapper.writeValueAsString(req.getHeaders()));
+				ps.setString(5, req.getBody());
+				ps.setString(6, req.getCharset());
+				ps.setString(7, req.getName());
+				ps.setString(8, req.getDescription());
 				ps.setString(9, app);
 				ps.setString(10, env);
-				setBoolean(ps, 11, query.getConfiguration().isParallel());
-				setBoolean(ps, 12, query.getConfiguration().isStrict());
-				setBoolean(ps, 13, query.getConfiguration().isEnable());
-				setBoolean(ps, 14, query.getConfiguration().isDebug());
-				ps.setString(15, mapper.writeValueAsString(query.getConfiguration().getExcludePaths()));
+				setBoolean(ps, 11, req.getConfiguration().isParallel());
+				setBoolean(ps, 12, req.getConfiguration().isStrict());
+				setBoolean(ps, 13, req.getConfiguration().isEnable());
+				setBoolean(ps, 14, req.getConfiguration().isDebug());
+				ps.setString(15, mapper.writeValueAsString(req.getConfiguration().getExcludePaths()));
 			} catch (JsonProcessingException e) {
 				throw new RuntimeException(e);
 			}
 		});
+		log.info("request added {}", req);
 	}
 		
 	@Override
 	public void state(@NonNull int[] id, boolean state){
 		
-		String q = "UPDATE API_ASR SET VA_ASR_ENB = ? WHERE ID_TST IN" + inArgs(id.length);
+		String q = "UPDATE API_REQ SET VA_ASR_ENB = ? WHERE ID_REQ IN" + inArgs(id.length);
 		template.update(q, ps-> {
 			setBoolean(ps, 1, state);
 			for(var i=0; i<id.length; i++) {				
@@ -127,12 +128,13 @@ public class StdDataPersister implements DataPersister {
 	@Override
 	public void delete(@NonNull int[] id){
 		
-		String q = "DELETE FROM API_ASR WHERE ID_ASR IN" + inArgs(id.length);
+		String q = "DELETE FROM API_REQ WHERE ID_REQ IN" + inArgs(id.length);
 		template.update(q, ps-> {
 			for(var i=0; i<id.length; i++) {				
 				ps.setInt(i+1, id[i]);
 			}
 		});
+		log.info("");
 	}
 	
 	@Override
@@ -151,28 +153,28 @@ public class StdDataPersister implements DataPersister {
 	}
 
 	@Override
-	public void traceAll(long id, @NonNull Collection<ApiAssertionsResult> list) {
-		requireNonNull(list);
+	public void trace(long id, @NonNull ApiAssertionsResult res) {
 		var q = "INSERT INTO ASR_REQ(ID_ASR, ID_REQ, VA_EXT_HST, VA_ACT_HST, "
 				+ "DH_EXT_STR, DH_EXT_END, DH_ACT_STR, DH_ACT_END, VA_REQ_STT, VA_REQ_STP) "
 				+ "VALUES(?,?,?,?,?,?,?,?,?,?)";
-		template.batchUpdate(q, list, list.size(), (ps, result)-> {
+		template.update(q, ps-> {
 			ps.setLong(1, id);
-			if(result.getId() == null) {
+			if(res.getId() == null) {
 				ps.setNull(2, BIGINT);
 			}
 			else {				
-				ps.setLong(2, result.getId());
+				ps.setLong(2, res.getId());
 			}
-			ps.setString(3, result.getExpExecution().getHost());
-			ps.setString(4, result.getActExecution().getHost());
-			ps.setTimestamp(5, ofEpochMilli(result.getExpExecution().getStart()));
-			ps.setTimestamp(6, ofEpochMilli(result.getExpExecution().getEnd()));
-			ps.setTimestamp(7, ofEpochMilli(result.getActExecution().getStart()));
-			ps.setTimestamp(8, ofEpochMilli(result.getActExecution().getEnd()));
-			ps.setString(9, result.getStatus().toString());
-			ps.setString(10, result.getStep() == null ? null : result.getStep().toString());
+			ps.setString(3, res.getExpExecution().getHost());
+			ps.setString(4, res.getActExecution().getHost());
+			ps.setTimestamp(5, ofEpochMilli(res.getExpExecution().getStart()));
+			ps.setTimestamp(6, ofEpochMilli(res.getExpExecution().getEnd()));
+			ps.setTimestamp(7, ofEpochMilli(res.getActExecution().getStart()));
+			ps.setTimestamp(8, ofEpochMilli(res.getActExecution().getEnd()));
+			ps.setString(9, res.getStatus().toString());
+			ps.setString(10, res.getStep() == null ? null : res.getStep().toString());
 		});
+		log.info("assersion {} ==> {}", id, res);
 	}
 	
 	private Long nextId(String col, String table) {

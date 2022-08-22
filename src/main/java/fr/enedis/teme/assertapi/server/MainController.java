@@ -4,7 +4,6 @@ import static fr.enedis.teme.assertapi.core.AssertionContext.CTX;
 import static fr.enedis.teme.assertapi.core.AssertionContext.CTX_ID;
 import static fr.enedis.teme.assertapi.core.AssertionContext.buildContext;
 import static fr.enedis.teme.assertapi.core.AssertionContext.parseHeader;
-import static java.util.Collections.singleton;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -42,19 +41,17 @@ public class MainController {
 	private final ObjectMapper mapper;
 
 	@RequestMapping
-	public List<ApiRequest> queries(
+	public List<ApiRequest> requests(
 			@RequestParam(name="app", required = false) String app,
 			@RequestParam(name="env", required = false) String env) {
-		
 		return service.data(app, env);
 	}
 	
 	@PutMapping
-	public void query(
+	public void request(
 			@RequestParam(name="app", required = false) String app,
 			@RequestParam(name="env", required = false) String env,
 			@RequestBody ApiRequest query) {
-		
 		service.insert(app, env, query);
 	}
 	
@@ -73,35 +70,30 @@ public class MainController {
 		service.state(ids, false);
 	}
 	
-	
 	@GetMapping("trace")
 	public long register(@RequestHeader(CTX) String context) {
-		
 		return service.register(parseHeader(mapper, context));
 	}
 	
 	@PutMapping("trace")
 	public void trace(@RequestHeader(CTX_ID) long ctx, @RequestBody ApiAssertionsResult result) {
-		
-		service.traceAll(ctx, singleton(result));
+		service.trace(ctx, result);
 	}
 	
 	@PostMapping("run")
-	public Object run(
+	public List<ApiAssertionsResult> run(
 			@RequestParam(name="app", required = false) String app,
 			@RequestParam(name="env", required = false) String env,
-			@RequestParam(name="trace", defaultValue = "true") boolean trace,
 			@RequestBody Configuration config) {
 
 		var ctx = service.register(buildContext());
 		List<ApiAssertionsResult> results = new LinkedList<>();
-		var list = queries(app, env);
+		var list = requests(app, env);
 		var assertions = new ApiAssertionsFactory()
 				.comparing(config.getRefer(), config.getTarget())
 				.using(new DefaultResponseComparator())
-				.trace(results::add)
+				.trace(a-> service.trace(ctx, a))
 				.build();
-		
 		list.forEach(q-> {
 			try {
 				assertions.assertApi(q);
@@ -112,14 +104,6 @@ public class MainController {
 				log.error("assertion fail", e);
 			}
 		});
-		if(trace) {
-			try {
-				service.traceAll(ctx, results);
-			}//silent trace
-			catch(Exception e) {
-				log.error("error while tracing results", e);
-			}
-		}
 		return results;
 	}
 	
