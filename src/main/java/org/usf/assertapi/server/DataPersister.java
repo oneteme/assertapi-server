@@ -1,10 +1,10 @@
-package fr.enedis.teme.assertapi.server;
+package org.usf.assertapi.server;
 
 import java.util.List;
 
-import fr.enedis.teme.assertapi.core.ApiAssertionsResult;
-import fr.enedis.teme.assertapi.core.ApiRequest;
-import fr.enedis.teme.assertapi.core.AssertionContext;
+import org.usf.assertapi.core.ApiAssertionsResult;
+import org.usf.assertapi.core.ApiRequest;
+import org.usf.assertapi.core.AssertionContext;
 
 public interface DataPersister {
 

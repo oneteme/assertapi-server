@@ -1,9 +1,9 @@
-package fr.enedis.teme.assertapi.server;
+package org.usf.assertapi.server;
 
-import static fr.enedis.teme.assertapi.core.AssertionContext.CTX;
-import static fr.enedis.teme.assertapi.core.AssertionContext.CTX_ID;
-import static fr.enedis.teme.assertapi.core.AssertionContext.buildContext;
-import static fr.enedis.teme.assertapi.core.AssertionContext.parseHeader;
+import static org.usf.assertapi.core.AssertionContext.CTX;
+import static org.usf.assertapi.core.AssertionContext.CTX_ID;
+import static org.usf.assertapi.core.AssertionContext.buildContext;
+import static org.usf.assertapi.core.AssertionContext.parseHeader;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -19,13 +19,13 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.usf.assertapi.core.ApiAssertionsFactory;
+import org.usf.assertapi.core.ApiAssertionsResult;
+import org.usf.assertapi.core.ApiRequest;
+import org.usf.assertapi.core.ServerConfig;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import fr.enedis.teme.assertapi.core.ApiAssertionsFactory;
-import fr.enedis.teme.assertapi.core.ApiAssertionsResult;
-import fr.enedis.teme.assertapi.core.ApiRequest;
-import fr.enedis.teme.assertapi.core.ServerConfig;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +40,7 @@ public class MainController {
 	private final DataPersister service;
 	private final ObjectMapper mapper;
 
-	@RequestMapping
+	@GetMapping
 	public List<ApiRequest> requests(
 			@RequestParam(name="app", required = false) String app,
 			@RequestParam(name="env", required = false) String env) {

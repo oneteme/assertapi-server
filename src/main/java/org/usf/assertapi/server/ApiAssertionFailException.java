@@ -1,4 +1,4 @@
-package fr.enedis.teme.assertapi.server;
+package org.usf.assertapi.server;
 
 @SuppressWarnings("serial")
 public final class ApiAssertionFailException extends ApiAssertionsException {

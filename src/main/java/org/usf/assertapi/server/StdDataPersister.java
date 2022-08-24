@@ -1,4 +1,4 @@
-package fr.enedis.teme.assertapi.server;
+package org.usf.assertapi.server;
 
 import static java.lang.System.currentTimeMillis;
 import static java.sql.Types.BIGINT;
@@ -16,15 +16,15 @@ import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.usf.assertapi.core.ApiAssertionsResult;
+import org.usf.assertapi.core.ApiRequest;
+import org.usf.assertapi.core.AssertionConfig;
+import org.usf.assertapi.core.AssertionContext;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import fr.enedis.teme.assertapi.core.ApiAssertionsResult;
-import fr.enedis.teme.assertapi.core.ApiRequest;
-import fr.enedis.teme.assertapi.core.AssertionConfig;
-import fr.enedis.teme.assertapi.core.AssertionContext;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,4 +1,4 @@
-package fr.enedis.teme.assertapi.server;
+package org.usf.assertapi.server;
 
 @SuppressWarnings("serial")
 public class ApiAssertionsException extends RuntimeException {
