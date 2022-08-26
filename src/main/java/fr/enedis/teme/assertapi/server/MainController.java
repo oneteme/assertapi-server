@@ -40,7 +40,7 @@ public class MainController {
 	private final DataPersister service;
 	private final ObjectMapper mapper;
 
-	@RequestMapping
+	@GetMapping
 	public List<ApiRequest> requests(
 			@RequestParam(name="app", required = false) String app,
 			@RequestParam(name="env", required = false) String env) {
