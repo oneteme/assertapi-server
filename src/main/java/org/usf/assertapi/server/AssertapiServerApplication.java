@@ -1,4 +1,4 @@
-package fr.enedis.teme.assertapi.server;
+package org.usf.assertapi.server;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 

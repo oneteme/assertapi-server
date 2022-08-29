@@ -1,4 +1,4 @@
-package fr.enedis.teme.assertapi.server;
+package org.usf.assertapi.server;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;

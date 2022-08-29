@@ -1,12 +1,11 @@
-package fr.enedis.teme.assertapi.server;
+package org.usf.assertapi.server;
 
 import java.util.Arrays;
 import java.util.Objects;
 
 import org.skyscreamer.jsonassert.JSONCompareResult;
 import org.springframework.http.MediaType;
-
-import fr.enedis.teme.assertapi.core.ResponseComparator;
+import org.usf.assertapi.core.ResponseComparator;
 
 public final class DefaultResponseComparator implements ResponseComparator {
 
