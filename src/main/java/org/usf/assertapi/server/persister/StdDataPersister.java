@@ -1,4 +1,4 @@
-package org.usf.assertapi.server;
+package org.usf.assertapi.server.persister;
 
 import static java.lang.System.currentTimeMillis;
 import static java.sql.Types.BIGINT;
@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.usf.assertapi.server.model.ApiRequestServer;
 
 @Slf4j
 @Service
@@ -38,11 +39,11 @@ public class StdDataPersister implements DataPersister {
 	private final JdbcTemplate template;
 	
 	@Override
-	public List<ApiRequest> data(String app, String env) {
+	public List<ApiRequestServer> data(String app, String env) {
 		
 		List<Object> args = new LinkedList<>();
 		String q= "SELECT ID_REQ, VA_API_URI, VA_API_MTH, VA_API_HDR, VA_API_BDY, VA_API_CHR, "
-				+ "VA_API_NME, VA_API_DSC, VA_ASR_PRL, VA_ASR_STR, VA_ASR_ENB, VA_ASR_DBG, VA_ASR_EXL "
+				+ "VA_API_NME, VA_API_DSC, VA_API_APP, VA_API_ENV, VA_ASR_PRL, VA_ASR_STR, VA_ASR_ENB, VA_ASR_DBG, VA_ASR_EXL "
 				+ "FROM API_REQ WHERE 1=1";
 		if(app != null) {
 			q += " AND VA_API_APP=?";
@@ -53,7 +54,7 @@ public class StdDataPersister implements DataPersister {
 			args.add(env);
 		}
 		var list = template.query(q, args.toArray(), (rs, i)-> {
-			ApiRequest req;
+			ApiRequestServer req;
 			try {
 				var conf = new AssertionConfig(
 						getBoolean(rs, "VA_ASR_DBG"), 
@@ -61,19 +62,24 @@ public class StdDataPersister implements DataPersister {
 						getBoolean(rs, "VA_ASR_STR"), 
 						getBoolean(rs, "VA_ASR_PRL"), 
 						mapper.readValue(rs.getString("VA_ASR_EXL"), String[].class));
-				req = new ApiRequest(
+				var apiReq = new ApiRequest(
 						rs.getLong("ID_REQ"),
 						rs.getString("VA_API_URI"),
 						rs.getString("VA_API_MTH"),
-						mapper.readValue(rs.getString("VA_API_HDR"), new TypeReference<Map<String, String>>(){}), 
+						mapper.readValue(rs.getString("VA_API_HDR"), new TypeReference<Map<String, String>>(){}),
 						rs.getString("VA_API_CHR"),
 						rs.getString("VA_API_NME"),
 						rs.getString("VA_API_DSC"),
-						conf);
+						conf
+				);
+				req = new ApiRequestServer(
+						apiReq,
+						Map.of("app", rs.getString("VA_API_APP"), "env", rs.getString("VA_API_ENV"))
+				);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
-			req.setBody(rs.getString("VA_API_BDY"));
+			req.getRequest().setBody(rs.getString("VA_API_BDY"));
 			return req;
 		});
 		log.info("app={}, env={} ==> {} requests", app, env, list.size());

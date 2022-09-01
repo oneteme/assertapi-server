@@ -1,4 +1,4 @@
-package org.usf.assertapi.server;
+package org.usf.assertapi.server.persister;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.usf.assertapi.server.persister.StdDataPersister;
 
 public class TeradataPersister extends StdDataPersister {
 

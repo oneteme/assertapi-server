@@ -1,4 +1,4 @@
-package org.usf.assertapi.server;
+package org.usf.assertapi.server.controller;
 
 import static org.usf.assertapi.core.AssertionContext.CTX;
 import static org.usf.assertapi.core.AssertionContext.CTX_ID;
@@ -29,6 +29,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.usf.assertapi.server.model.ApiRequestServer;
+import org.usf.assertapi.server.persister.DataPersister;
+import org.usf.assertapi.server.DefaultResponseComparator;
 
 @Slf4j
 @CrossOrigin
@@ -41,7 +44,7 @@ public class MainController {
 	private final ObjectMapper mapper;
 
 	@GetMapping
-	public List<ApiRequest> requests(
+	public List<ApiRequestServer> requests(
 			@RequestParam(name="app", required = false) String app,
 			@RequestParam(name="env", required = false) String env) {
 		return service.data(app, env);
@@ -96,7 +99,7 @@ public class MainController {
 				.build();
 		list.forEach(q-> {
 			try {
-				assertions.assertApi(q);
+				assertions.assertApi(q.getRequest());
 				log.info("TEST {} OK", q);
 			}
 			catch(Throwable e) {
