@@ -4,9 +4,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.usf.assertapi.core.ApiAssertionsResult;
 import org.usf.assertapi.core.ApiRequest;
-
-import java.util.Map;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
@@ -14,7 +13,7 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 @Getter
 @JsonInclude(NON_NULL)
 @RequiredArgsConstructor
-public final class ApiRequestServer {
+public class ApiAssertionsResultServer {
+    private final ApiAssertionsResult result;
     private final ApiRequest request;
-    private final Map<String, String> metadata;
 }
