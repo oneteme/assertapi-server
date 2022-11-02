@@ -6,9 +6,13 @@ import org.usf.assertapi.server.model.ApiServerConfig;
 import java.util.List;
 
 public interface EnvironmentDao {
-    List<ApiServerConfig> select();
+    List<ApiServerConfig> selectEnvironment();
 
-    void insert(@NonNull ApiServerConfig serverConfig);
+    void insertEnvironment(long id, @NonNull ApiServerConfig serverConfig);
 
-    void delete(@NonNull int[] ids);
+    void updateEnvironment(@NonNull ApiServerConfig serverConfig);
+
+    void deleteEnvironment(@NonNull int[] ids);
+
+    Long nextId(String col, String table);
 }

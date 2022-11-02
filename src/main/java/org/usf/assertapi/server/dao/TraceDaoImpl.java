@@ -1,6 +1,5 @@
 package org.usf.assertapi.server.dao;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,8 +8,6 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import org.usf.assertapi.core.*;
 import org.usf.assertapi.server.model.ApiAssertionsResultServer;
-import org.usf.assertapi.server.utils.DaoUtils;
-
 import java.util.LinkedList;
 import java.util.List;
 
@@ -24,23 +21,14 @@ import static org.usf.assertapi.server.utils.DaoUtils.ofEpochMilli;
 @RequiredArgsConstructor
 public class TraceDaoImpl implements TraceDao {
 
-    private final ObjectMapper mapper;
     private final JdbcTemplate template;
 
     @Override
-    public List<ApiAssertionsResultServer> select(long[] ids, String app, String env) {
+    public List<ApiAssertionsResultServer> select(long[] ids) {
         List<Object> args = new LinkedList<>();
-        StringBuilder q = new StringBuilder("SELECT ASR_REQ.ID_ASR, ASR_REQ.VA_EXT_HST, ASR_REQ.VA_ACT_HST, ASR_REQ.DH_EXT_STR, ASR_REQ.DH_EXT_END, ASR_REQ.DH_ACT_STR, "
-                + "ASR_REQ.DH_ACT_END, ASR_REQ.VA_REQ_STT, ASR_REQ.VA_REQ_STP, API_REQ.ID_REQ, API_REQ.VA_API_URI, API_REQ.VA_API_MTH, API_REQ.VA_API_NME, API_REQ.VA_API_DSC "
-                + "FROM ASR_REQ INNER JOIN API_REQ ON ASR_REQ.ID_REQ = API_REQ.ID_REQ  WHERE 1=1");
-        if(app != null) {
-            q.append(" AND API_REQ.VA_API_APP=?");
-            args.add(app);
-        }
-        if(env != null) {
-            q.append(" AND API_REQ.VA_API_ENV=?");
-            args.add(env);
-        }
+        StringBuilder q = new StringBuilder("SELECT ASR_REQ.ID_ASR, ASR_REQ.VA_EXT_HST, ASR_REQ.VA_ACT_HST, ASR_REQ.DH_EXT_STR, ASR_REQ.DH_EXT_END, ASR_REQ.DH_ACT_STR,"
+                + " ASR_REQ.DH_ACT_END, ASR_REQ.VA_EXT_STT, ASR_REQ.VA_ACT_STT, ASR_REQ.VA_EXT_MIM, ASR_REQ.VA_ACT_MIM, ASR_REQ.VA_EXT_RES, VA_ACT_RES, ASR_REQ.VA_REQ_STT, ASR_REQ.VA_REQ_STP, API_REQ.ID_REQ, API_REQ.VA_API_URI, API_REQ.VA_API_MTH, API_REQ.VA_API_NME, API_REQ.VA_API_DSC"
+                + " FROM ASR_REQ INNER JOIN API_REQ ON ASR_REQ.ID_REQ = API_REQ.ID_REQ WHERE 1=1");
         if(ids != null) {
             q.append(" AND ASR_REQ.ID_ASR IN ").append(inArgs(ids.length));
             for (long id : ids) {
@@ -49,8 +37,22 @@ public class TraceDaoImpl implements TraceDao {
         }
         q.append(" ORDER BY ASR_REQ.ID_ASR DESC");
         var list = template.query(q.toString(), args.toArray(), (rs, i)-> {
-            var expConf = new ApiExecution(rs.getString("VA_EXT_HST"));
-            var actConf = new ApiExecution(rs.getString("VA_ACT_HST"));
+            var expConf = new ApiExecution(
+                    rs.getString("VA_EXT_HST"),
+                    rs.getDate("DH_EXT_STR").getTime(),
+                    rs.getDate("DH_EXT_END").getTime(),
+                    rs.getInt("VA_EXT_STT"),
+                    rs.getString("VA_EXT_MIM"),
+                    rs.getBytes("VA_EXT_RES") != null ? new String(rs.getBytes("VA_EXT_RES")) : null
+            );
+            var actConf = new ApiExecution(
+                    rs.getString("VA_ACT_HST"),
+                    rs.getDate("DH_ACT_STR").getTime(),
+                    rs.getDate("DH_ACT_END").getTime(),
+                    rs.getInt("VA_ACT_STT"),
+                    rs.getString("VA_ACT_MIM"),
+                    rs.getBytes("VA_ACT_RES") != null ? new String(rs.getBytes("VA_ACT_RES")) : null
+            );
             var res = new ApiAssertionsResult(
                     rs.getLong("ID_ASR"),
                     expConf,
@@ -73,16 +75,17 @@ public class TraceDaoImpl implements TraceDao {
                     req
             );
         });
-        log.info("app={}, env={} ==> {} requests", app, env, list.size());
+        log.info("{} requests", list.size());
         return list;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void insert(long id, @NonNull ApiAssertionsResult res) {
-        var q = "INSERT INTO ASR_REQ(ID_ASR, ID_REQ, VA_EXT_HST, VA_ACT_HST, "
-                + "DH_EXT_STR, DH_EXT_END, DH_ACT_STR, DH_ACT_END, VA_REQ_STT, VA_REQ_STP) "
-                + "VALUES(?,?,?,?,?,?,?,?,?,?)";
+        var q = "INSERT INTO ASR_REQ(ID_ASR, ID_REQ, VA_EXT_HST, VA_ACT_HST,"
+                + " DH_EXT_STR, DH_EXT_END, DH_ACT_STR, DH_ACT_END, VA_EXT_STT, VA_ACT_STT,"
+                + " VA_EXT_MIM, VA_ACT_MIM, VA_EXT_RES, VA_ACT_RES, VA_REQ_STT, VA_REQ_STP)"
+                + " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         template.update(q, ps-> {
             ps.setLong(1, id);
             if(res.getId() == null) {
@@ -97,8 +100,14 @@ public class TraceDaoImpl implements TraceDao {
             ps.setTimestamp(6, ofEpochMilli(res.getExpExecution().getEnd()));
             ps.setTimestamp(7, ofEpochMilli(res.getActExecution().getStart()));
             ps.setTimestamp(8, ofEpochMilli(res.getActExecution().getEnd()));
-            ps.setString(9, res.getStatus().toString());
-            ps.setString(10, res.getStep() == null ? null : res.getStep().toString());
+            ps.setInt(9, res.getExpExecution().getStatusCode());
+            ps.setInt(10, res.getActExecution().getStatusCode());
+            ps.setString(11, res.getExpExecution().getContentType());
+            ps.setString(12, res.getActExecution().getContentType());
+            ps.setBytes(13, res.getExpExecution().getResponse() == null ? null : res.getExpExecution().getResponse().getBytes());
+            ps.setBytes(14, res.getActExecution().getResponse() == null ? null : res.getActExecution().getResponse().getBytes());
+            ps.setString(15, res.getStatus().toString());
+            ps.setString(16, res.getStep() == null ? null : res.getStep().toString());
         });
         log.info("assersion {} ==> {}", id, res);
     }

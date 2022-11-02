@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.usf.assertapi.server.dao.EnvironmentDao;
 import org.usf.assertapi.server.model.ApiServerConfig;
+import org.usf.assertapi.server.service.EnvironmentService;
 
 import java.util.List;
 
@@ -14,24 +15,32 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("/v1/assert/api/environment")
 public class EnvironmentController {
+    private final EnvironmentService service;
     private final EnvironmentDao dao;
 
     @GetMapping
     public List<ApiServerConfig> get() {
-        return dao.select();
+        return dao.selectEnvironment();
     }
 
     @PutMapping
-    public void put(
+    public long put(
             @RequestBody ApiServerConfig serverConfig
     ) {
-        dao.insert(serverConfig);
+        return service.addEnvironment(serverConfig);
+    }
+
+    @PostMapping
+    public void update(
+            @RequestBody ApiServerConfig serverConfig
+    ) {
+        service.updateEnvironment(serverConfig);
     }
 
     @DeleteMapping
     public void delete(
             @RequestParam("id") int[] ids
     ) {
-        dao.delete(ids);
+        dao.deleteEnvironment(ids);
     }
 }

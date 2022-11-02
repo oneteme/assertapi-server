@@ -6,7 +6,10 @@ import org.springframework.web.bind.annotation.*;
 import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.server.dao.RequestDao;
 import org.usf.assertapi.server.model.ApiRequestServer;
+import org.usf.assertapi.server.service.RequestService;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,6 +20,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/v1/assert/api/request")
 public class RequestController {
     private final RequestDao dao;
+    private final RequestService service;
 
     @GetMapping
     public List<ApiRequest> get(
@@ -27,16 +31,19 @@ public class RequestController {
     }
 
     @PutMapping
-    public void put(
-            @RequestParam(name="app", required = false) String app,
-            @RequestParam(name="env", required = false) String env,
-            @RequestBody ApiRequest query) {
-        dao.insert(app, env, query);
+    public long put(@RequestBody ApiRequestServer query) {
+
+        return service.addRequest(query);
+    }
+
+    @PostMapping
+    public void update(@RequestBody ApiRequestServer query) {
+        service.updateRequest(query);
     }
 
     @DeleteMapping
     public void delete(@RequestParam("id") int[] ids) {
-        dao.delete(ids);
+        dao.deleteRequest(ids);
     }
 
     @GetMapping("all")
@@ -44,7 +51,7 @@ public class RequestController {
             @RequestParam(name="id", required = false) int[] ids,
             @RequestParam(name="app", required = false) String app,
             @RequestParam(name="env", required = false) String env) {
-        return dao.select(ids, app, env);
+        return dao.selectRequest(ids, env != null ? List.of(env) : new ArrayList<>(), app);
     }
 
     @PatchMapping("enable")

@@ -24,7 +24,7 @@ public class EnvironmentDaoImpl implements EnvironmentDao {
     private final JdbcTemplate template;
 
     @Override
-    public List<ApiServerConfig> select() {
+    public List<ApiServerConfig> selectEnvironment() {
         String q = "SELECT ID_ENV, VA_API_HST, VA_API_PRT, VA_API_AUT_HST, VA_API_AUT_MTH, VA_API_APP, VA_API_ENV, VA_API_PRD "
                 + "FROM API_ENV";
         var list = template.query(q, (rs, i) -> {
@@ -49,13 +49,12 @@ public class EnvironmentDaoImpl implements EnvironmentDao {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void insert(@NonNull ApiServerConfig serverConfig) {
+    public void insertEnvironment(long id, @NonNull ApiServerConfig serverConfig) {
         var q = "INSERT INTO API_ENV(ID_ENV, VA_API_HST, VA_API_PRT, VA_API_AUT_HST, VA_API_AUT_MTH, VA_API_APP, "
                 + "VA_API_ENV, VA_API_PRD) "
                 + "VALUES(?,?,?,?,?,?,?,?)";
-        long next = nextId("ID_ENV", "API_ENV");
         template.update(q, ps-> {
-            ps.setLong(1, next);
+            ps.setLong(1, id);
             ps.setString(2, serverConfig.getServerConfig().getHost());
             ps.setInt(3, serverConfig.getServerConfig().getPort());
             ps.setString(4, serverConfig.getServerConfig().getAuth() == null ? null : serverConfig.getServerConfig().getAuth().getAccessTokenUrl());
@@ -68,8 +67,27 @@ public class EnvironmentDaoImpl implements EnvironmentDao {
     }
 
     @Override
+    public void updateEnvironment(@NonNull ApiServerConfig serverConfig) {
+
+        var q = "UPDATE API_ENV SET VA_API_HST = ?, VA_API_PRT = ?, VA_API_AUT_HST = ?, " +
+                "VA_API_AUT_MTH = ?, VA_API_APP = ?, VA_API_ENV = ?, VA_API_PRD = ? " +
+                "WHERE ID_ENV = ?";
+        template.update(q, ps-> {
+            ps.setString(1, serverConfig.getServerConfig().getHost());
+            ps.setInt(2, serverConfig.getServerConfig().getPort());
+            ps.setString(3, serverConfig.getServerConfig().getAuth().getAccessTokenUrl());
+            ps.setString(4, serverConfig.getServerConfig().getAuth().getAuthMethod());
+            ps.setString(5, serverConfig.getApp());
+            ps.setString(6, serverConfig.getEnv());
+            ps.setBoolean(7, serverConfig.isProd());
+            ps.setLong(8, serverConfig.getId());
+        });
+        log.info("environment updated : {}", serverConfig);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
-    public void delete(@NonNull int[] ids) {
+    public void deleteEnvironment(@NonNull int[] ids) {
         String q = "DELETE FROM API_ENV WHERE ID_ENV IN" + inArgs(ids.length);
         template.update(q, ps-> {
             for(var i=0; i<ids.length; i++) {
@@ -79,7 +97,8 @@ public class EnvironmentDaoImpl implements EnvironmentDao {
         log.info("");
     }
 
-    private Long nextId(String col, String table) {
+    @Override
+    public Long nextId(String col, String table) {
         return template.query("SELECT MAX(" + col + ") FROM " + table,
                 rs-> rs.next() ? rs.getLong(1) : 0) + 1;
     }

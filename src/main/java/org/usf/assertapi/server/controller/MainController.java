@@ -1,8 +1,17 @@
 package org.usf.assertapi.server.controller;
 
+import static java.util.Arrays.asList;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.IntStream.of;
 import static org.usf.assertapi.core.AssertionContext.buildContext;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,11 +25,12 @@ import org.usf.assertapi.core.ServerConfig;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.usf.assertapi.server.dao.EnvironmentDao;
 import org.usf.assertapi.server.dao.RequestDao;
 import org.usf.assertapi.server.dao.TraceDao;
+import org.usf.assertapi.server.model.ApiRequestGroupServer;
 import org.usf.assertapi.server.model.ApiRequestServer;
 import org.usf.assertapi.server.DefaultResponseComparator;
+
 
 @Slf4j
 @CrossOrigin
@@ -34,13 +44,22 @@ public class MainController {
 	
 	@PostMapping("run")
 	public long run(
+			@RequestParam(name="actual_env") String actualEnv,
+			@RequestParam(name="expected_env") String expectedEnv,
+			@RequestParam(name="app") String app,
 			@RequestParam(name="id", required = false) int[] ids,
-			@RequestParam(name="app", required = false) String app,
-			@RequestParam(name="env", required = false) String env,
+			@RequestParam(name="disabled_id", required = false) int[] disabledIds,
 			@RequestBody Configuration config) {
 
+		List<String> envs = asList(actualEnv, expectedEnv);
 		var ctx = traceDao.register(buildContext());
-		var list = requestDao.select(ids, app, env).stream().map(ApiRequestServer::getRequest).collect(Collectors.toList());
+		var list = requestDao.selectRequest(ids, envs, app).stream()
+				.filter(r -> r.getRequestGroupList().stream().map(ApiRequestGroupServer::getEnv).collect(toList()).containsAll(envs))
+				.map(ApiRequestServer::getRequest)
+				.collect(toList());
+		if(disabledIds != null) {
+			of(disabledIds).forEach(i-> list.stream().filter(t-> t.getId() == i).findAny().ifPresent(t-> t.getConfiguration().setEnable(false)));
+		}
 		var assertions = new ApiAssertionsFactory()
 				.comparing(config.getRefer(), config.getTarget())
 				.using(new DefaultResponseComparator())

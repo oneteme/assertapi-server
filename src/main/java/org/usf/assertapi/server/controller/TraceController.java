@@ -23,10 +23,9 @@ public class TraceController {
 
     @GetMapping
     public List<ApiAssertionsResultServer> get(
-            @RequestParam(name="id", required = false) long[] ids,
-            @RequestParam(name="app", required = false) String app,
-            @RequestParam(name="env", required = false) String env) {
-        return dao.select(ids, app, env);
+            @RequestParam(name="id", required = false) long[] ids
+    ) {
+        return dao.select(ids);
     }
 
     @PutMapping

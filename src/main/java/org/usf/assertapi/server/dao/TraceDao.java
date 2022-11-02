@@ -8,7 +8,7 @@ import org.usf.assertapi.server.model.ApiAssertionsResultServer;
 import java.util.List;
 
 public interface TraceDao {
-    List<ApiAssertionsResultServer> select(long[] ids, String app, String env);
+    List<ApiAssertionsResultServer> select(long[] ids);
 
     void insert(long id, @NonNull ApiAssertionsResult res);
 
