@@ -12,7 +12,9 @@ import org.usf.assertapi.core.ServerConfig;
 import org.usf.assertapi.server.model.ApiServerConfig;
 
 import java.util.List;
+import java.util.Objects;
 
+import static java.util.Objects.requireNonNull;
 import static org.usf.assertapi.server.utils.DaoUtils.inArgs;
 
 @Slf4j
@@ -75,8 +77,8 @@ public class EnvironmentDaoImpl implements EnvironmentDao {
         template.update(q, ps-> {
             ps.setString(1, serverConfig.getServerConfig().getHost());
             ps.setInt(2, serverConfig.getServerConfig().getPort());
-            ps.setString(3, serverConfig.getServerConfig().getAuth().getAccessTokenUrl());
-            ps.setString(4, serverConfig.getServerConfig().getAuth().getAuthMethod());
+            ps.setString(3, serverConfig.getServerConfig().getAuth() != null ? serverConfig.getServerConfig().getAuth().getAccessTokenUrl() : null);
+            ps.setString(4, serverConfig.getServerConfig().getAuth() != null ? serverConfig.getServerConfig().getAuth().getAuthMethod() : null);
             ps.setString(5, serverConfig.getApp());
             ps.setString(6, serverConfig.getEnv());
             ps.setBoolean(7, serverConfig.isProd());

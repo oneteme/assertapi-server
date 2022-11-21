@@ -6,19 +6,15 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.of;
 import static org.usf.assertapi.core.AssertionContext.buildContext;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.usf.assertapi.core.ApiAssertionsFactory;
 import org.usf.assertapi.core.ServerConfig;
 
@@ -41,15 +37,29 @@ public class MainController {
 
 	private final TraceDao traceDao;
 	private final RequestDao requestDao;
-	
+
+	private Map<String, SseEmitter> sseEmitters = new ConcurrentHashMap<>();
+
+	@GetMapping("/progress")
+	public SseEmitter eventEmitter() throws IOException {
+		SseEmitter sseEmitter = new SseEmitter(Long.MAX_VALUE);
+		UUID guid = UUID.randomUUID();
+		sseEmitters.put(guid.toString(), sseEmitter);
+		sseEmitter.send(SseEmitter.event().name("GUI_ID").data(guid));
+		sseEmitter.onCompletion(() -> sseEmitters.remove(guid.toString()));
+		sseEmitter.onTimeout(() -> sseEmitters.remove(guid.toString()));
+		return sseEmitter;
+	}
+
 	@PostMapping("run")
 	public long run(
+			@RequestHeader(value = "GUI_ID") String guid,
 			@RequestParam(name="actual_env") String actualEnv,
 			@RequestParam(name="expected_env") String expectedEnv,
 			@RequestParam(name="app") String app,
 			@RequestParam(name="id", required = false) int[] ids,
 			@RequestParam(name="disabled_id", required = false) int[] disabledIds,
-			@RequestBody Configuration config) {
+			@RequestBody Configuration config) throws IOException {
 
 		List<String> envs = asList(actualEnv, expectedEnv);
 		var ctx = traceDao.register(buildContext());
@@ -57,16 +67,25 @@ public class MainController {
 				.filter(r -> r.getRequestGroupList().stream().map(ApiRequestGroupServer::getEnv).collect(toList()).containsAll(envs))
 				.map(ApiRequestServer::getRequest)
 				.collect(toList());
+		sseEmitters.get(guid).send(SseEmitter.event().name("nb tests launch " + guid).data(list.size()));
 		if(disabledIds != null) {
 			of(disabledIds).forEach(i-> list.stream().filter(t-> t.getId() == i).findAny().ifPresent(t-> t.getConfiguration().setEnable(false)));
 		}
 		var assertions = new ApiAssertionsFactory()
 				.comparing(config.getRefer(), config.getTarget())
 				.using(new DefaultResponseComparator())
-				.trace(a-> traceDao.insert(ctx, a))
+				.trace(a-> {
+					traceDao.insert(ctx, a);
+					try {
+						sseEmitters.get(guid).send(SseEmitter.event().name(a.getId() + " end " + guid).data(a));
+					} catch (IOException e) {
+						log.error("server sent events fail", e);
+					}
+				})
 				.build();
 		list.forEach(q-> {
 			try {
+				sseEmitters.get(guid).send(SseEmitter.event().name("start " + guid).data(q));
 				assertions.assertApi(q);
 				log.info("TEST {} OK", q);
 			}
@@ -75,6 +94,7 @@ public class MainController {
 				log.error("assertion fail", e);
 			}
 		});
+		sseEmitters.get(guid).complete();
 		return ctx;
 	}
 	
