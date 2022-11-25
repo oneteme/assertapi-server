@@ -22,7 +22,6 @@ import static org.usf.assertapi.server.utils.DaoUtils.inArgs;
 @RequiredArgsConstructor
 public class EnvironmentDaoImpl implements EnvironmentDao {
 
-    private final ObjectMapper mapper;
     private final JdbcTemplate template;
 
     @Override
@@ -50,7 +49,6 @@ public class EnvironmentDaoImpl implements EnvironmentDao {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void insertEnvironment(long id, @NonNull ApiServerConfig serverConfig) {
         var q = "INSERT INTO API_ENV(ID_ENV, VA_API_HST, VA_API_PRT, VA_API_AUT_HST, VA_API_AUT_MTH, VA_API_APP, "
                 + "VA_API_ENV, VA_API_PRD) "
@@ -88,7 +86,6 @@ public class EnvironmentDaoImpl implements EnvironmentDao {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void deleteEnvironment(@NonNull int[] ids) {
         String q = "DELETE FROM API_ENV WHERE ID_ENV IN" + inArgs(ids.length);
         template.update(q, ps-> {

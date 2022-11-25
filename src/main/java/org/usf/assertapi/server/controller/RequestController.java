@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @RequestMapping("/v1/assert/api/request")
 public class RequestController {
-    private final RequestDao dao;
     private final RequestService service;
 
     @GetMapping
@@ -43,7 +42,7 @@ public class RequestController {
 
     @DeleteMapping
     public void delete(@RequestParam("id") int[] ids) {
-        dao.deleteRequest(ids);
+        service.removeRequest(ids);
     }
 
     @GetMapping("all")
@@ -51,17 +50,17 @@ public class RequestController {
             @RequestParam(name="id", required = false) int[] ids,
             @RequestParam(name="app", required = false) String app,
             @RequestParam(name="env", required = false) String env) {
-        return dao.selectRequest(ids, env != null ? List.of(env) : new ArrayList<>(), app);
+        return service.getRequestList(ids, env != null ? List.of(env) : new ArrayList<>(), app);
     }
 
     @PatchMapping("enable")
     public void enable(@RequestParam("id") int[] ids) {
-        dao.updateState(ids, true);
+        service.updateState(ids, true);
     }
 
     @PatchMapping("disable")
     public void disable(@RequestParam("id") int[] ids) {
-        dao.updateState(ids, false);
+        service.updateState(ids, false);
     }
 
 }

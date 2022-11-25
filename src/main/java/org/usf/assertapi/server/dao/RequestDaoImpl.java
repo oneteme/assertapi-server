@@ -141,25 +141,30 @@ public class RequestDaoImpl implements RequestDao {
     public void updateRequest(@NonNull ApiRequest req) {
 
         var q = "UPDATE API_REQ SET VA_API_URI = ?, VA_API_MTH = ?, VA_API_BDY = ?, " +
-                "VA_API_NME = ?, VA_API_DSC = ? " +
+                "VA_API_NME = ?, VA_API_DSC = ?, VA_API_HDR = ? " +
                 "WHERE ID_REQ = ?";
         template.update(q, ps-> {
-            ps.setString(1, req.getUri());
-            ps.setString(2, req.getMethod());
-            ps.setString(3, req.getBody());
-            ps.setString(4, req.getName());
-            ps.setString(5, req.getDescription());
-            ps.setLong(6, req.getId());
+            try {
+                ps.setString(1, req.getUri());
+                ps.setString(2, req.getMethod());
+                ps.setString(3, req.getBody());
+                ps.setString(4, req.getName());
+                ps.setString(5, req.getDescription());
+                ps.setString(6, mapper.writeValueAsString(req.getHeaders()));
+                ps.setLong(7, req.getId());
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
         });
         log.info("request updated : {}", req);
     }
 
     @Override
-    public void deleteRequest(@NonNull int[] id){
-        String q = "DELETE FROM API_REQ WHERE ID_REQ IN" + inArgs(id.length);
+    public void deleteRequest(@NonNull int[] ids){
+        String q = "DELETE FROM API_REQ WHERE ID_REQ IN" + inArgs(ids.length);
         template.update(q, ps-> {
-            for(var i=0; i<id.length; i++) {
-                ps.setInt(i+1, id[i]);
+            for(var i=0; i<ids.length; i++) {
+                ps.setInt(i+1, ids[i]);
             }
         });
         log.info("");
@@ -185,13 +190,13 @@ public class RequestDaoImpl implements RequestDao {
     }
 
     @Override
-    public void updateState(@NonNull int[] id, boolean state){
+    public void updateState(@NonNull int[] ids, boolean state){
 
-        String q = "UPDATE API_REQ SET VA_ASR_ENB = ? WHERE ID_REQ IN" + inArgs(id.length);
+        String q = "UPDATE API_REQ SET VA_ASR_ENB = ? WHERE ID_REQ IN" + inArgs(ids.length);
         template.update(q, ps-> {
             ps.setBoolean(1, state);
-            for(var i=0; i<id.length; i++) {
-                ps.setInt(i+2, id[i]);
+            for(var i=0; i<ids.length; i++) {
+                ps.setInt(i+2, ids[i]);
             }
         });
     }

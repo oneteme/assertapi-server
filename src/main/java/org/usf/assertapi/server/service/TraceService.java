@@ -1,7 +1,5 @@
-package org.usf.assertapi.server.dao;
+package org.usf.assertapi.server.service;
 
-import lombok.NonNull;
-import org.springframework.transaction.annotation.Transactional;
 import org.usf.assertapi.core.ApiAssertionsResult;
 import org.usf.assertapi.core.AssertionContext;
 import org.usf.assertapi.server.model.ApiAssertionsResultServer;
@@ -9,12 +7,13 @@ import org.usf.assertapi.server.model.ApiTraceGroup;
 
 import java.util.List;
 
-public interface TraceDao {
-    List<ApiAssertionsResultServer> select(long[] ids);
+public interface TraceService {
 
-    void insert(long id, ApiAssertionsResult res);
+    List<ApiAssertionsResultServer> getTraces(long[] ids);
+
+    void addTrace(long id, ApiAssertionsResult res);
 
     long register(AssertionContext ctx, String app, String actEnv, String expEnv);
 
-    List<ApiTraceGroup> selectTraceGroup();
+    List<ApiTraceGroup> getTraceGroups();
 }

@@ -16,11 +16,10 @@ import java.util.List;
 @RequestMapping("/v1/assert/api/environment")
 public class EnvironmentController {
     private final EnvironmentService service;
-    private final EnvironmentDao dao;
 
     @GetMapping
     public List<ApiServerConfig> get() {
-        return dao.selectEnvironment();
+        return service.getEnvironments();
     }
 
     @PutMapping
@@ -41,6 +40,6 @@ public class EnvironmentController {
     public void delete(
             @RequestParam("id") int[] ids
     ) {
-        dao.deleteEnvironment(ids);
+        service.removeEnvironment(ids);
     }
 }

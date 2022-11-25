@@ -8,6 +8,8 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import org.usf.assertapi.core.*;
 import org.usf.assertapi.server.model.ApiAssertionsResultServer;
+import org.usf.assertapi.server.model.ApiTraceGroup;
+
 import java.util.LinkedList;
 import java.util.List;
 
@@ -27,7 +29,7 @@ public class TraceDaoImpl implements TraceDao {
     public List<ApiAssertionsResultServer> select(long[] ids) {
         List<Object> args = new LinkedList<>();
         StringBuilder q = new StringBuilder("SELECT ASR_REQ.ID_ASR, ASR_REQ.VA_EXT_HST, ASR_REQ.VA_ACT_HST, ASR_REQ.DH_EXT_STR, ASR_REQ.DH_EXT_END, ASR_REQ.DH_ACT_STR,"
-                + " ASR_REQ.DH_ACT_END, ASR_REQ.VA_EXT_STT, ASR_REQ.VA_ACT_STT, ASR_REQ.VA_EXT_MIM, ASR_REQ.VA_ACT_MIM, ASR_REQ.VA_EXT_RES, VA_ACT_RES, ASR_REQ.VA_REQ_STT, ASR_REQ.VA_REQ_STP, API_REQ.ID_REQ, API_REQ.VA_API_URI, API_REQ.VA_API_MTH, API_REQ.VA_API_NME, API_REQ.VA_API_DSC"
+                + " ASR_REQ.DH_ACT_END, ASR_REQ.VA_REQ_STT, ASR_REQ.VA_REQ_STP, API_REQ.ID_REQ, API_REQ.VA_API_URI, API_REQ.VA_API_MTH, API_REQ.VA_API_NME, API_REQ.VA_API_DSC"
                 + " FROM ASR_REQ INNER JOIN API_REQ ON ASR_REQ.ID_REQ = API_REQ.ID_REQ WHERE 1=1");
         if(ids != null) {
             q.append(" AND ASR_REQ.ID_ASR IN ").append(inArgs(ids.length));
@@ -40,18 +42,12 @@ public class TraceDaoImpl implements TraceDao {
             var expConf = new ApiExecution(
                     rs.getString("VA_EXT_HST"),
                     rs.getDate("DH_EXT_STR").getTime(),
-                    rs.getDate("DH_EXT_END").getTime(),
-                    rs.getInt("VA_EXT_STT"),
-                    rs.getString("VA_EXT_MIM"),
-                    rs.getBytes("VA_EXT_RES") != null ? new String(rs.getBytes("VA_EXT_RES")) : null
+                    rs.getDate("DH_EXT_END").getTime()
             );
             var actConf = new ApiExecution(
                     rs.getString("VA_ACT_HST"),
                     rs.getDate("DH_ACT_STR").getTime(),
-                    rs.getDate("DH_ACT_END").getTime(),
-                    rs.getInt("VA_ACT_STT"),
-                    rs.getString("VA_ACT_MIM"),
-                    rs.getBytes("VA_ACT_RES") != null ? new String(rs.getBytes("VA_ACT_RES")) : null
+                    rs.getDate("DH_ACT_END").getTime()
             );
             var res = new ApiAssertionsResult(
                     rs.getLong("ID_ASR"),
@@ -83,9 +79,9 @@ public class TraceDaoImpl implements TraceDao {
     @Transactional(rollbackFor = Exception.class)
     public void insert(long id, @NonNull ApiAssertionsResult res) {
         var q = "INSERT INTO ASR_REQ(ID_ASR, ID_REQ, VA_EXT_HST, VA_ACT_HST,"
-                + " DH_EXT_STR, DH_EXT_END, DH_ACT_STR, DH_ACT_END, VA_EXT_STT, VA_ACT_STT,"
-                + " VA_EXT_MIM, VA_ACT_MIM, VA_EXT_RES, VA_ACT_RES, VA_REQ_STT, VA_REQ_STP)"
-                + " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+                + " DH_EXT_STR, DH_EXT_END, DH_ACT_STR, DH_ACT_END,"
+                + " VA_REQ_STT, VA_REQ_STP)"
+                + " VALUES(?,?,?,?,?,?,?,?,?,?)";
         template.update(q, ps-> {
             ps.setLong(1, id);
             if(res.getId() == null) {
@@ -100,31 +96,48 @@ public class TraceDaoImpl implements TraceDao {
             ps.setTimestamp(6, ofEpochMilli(res.getExpExecution().getEnd()));
             ps.setTimestamp(7, ofEpochMilli(res.getActExecution().getStart()));
             ps.setTimestamp(8, ofEpochMilli(res.getActExecution().getEnd()));
-            ps.setInt(9, res.getExpExecution().getStatusCode());
-            ps.setInt(10, res.getActExecution().getStatusCode());
-            ps.setString(11, res.getExpExecution().getContentType());
-            ps.setString(12, res.getActExecution().getContentType());
-            ps.setBytes(13, res.getExpExecution().getResponse() == null ? null : res.getExpExecution().getResponse().getBytes());
-            ps.setBytes(14, res.getActExecution().getResponse() == null ? null : res.getActExecution().getResponse().getBytes());
-            ps.setString(15, res.getStatus().toString());
-            ps.setString(16, res.getStep() == null ? null : res.getStep().toString());
+            ps.setString(9, res.getStatus().toString());
+            ps.setString(10, res.getStep() == null ? null : res.getStep().toString());
         });
         log.info("assersion {} ==> {}", id, res);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public long register(@NonNull AssertionContext ctx) {
+    public long register(@NonNull AssertionContext ctx, String app, String actEnv, String expEnv) {
 
         var id = currentTimeMillis();
-        var q = "INSERT INTO ASR_GRP(ID_ASR, VA_HST_USR, VA_HST_OS, VA_HST_ADR) VALUES(?,?,?,?)";
+        var q = "INSERT INTO ASR_GRP(ID_ASR, VA_HST_USR, VA_HST_OS, VA_HST_ADR, VA_API_APP, VA_EXT_ENV, VA_ACT_ENV) VALUES(?,?,?,?,?,?,?)";
         template.update(q, ps-> {
             ps.setLong(1, id);
             ps.setString(2, ctx.getUser());
             ps.setString(3, ctx.getOs());
             ps.setString(4, ctx.getAddress());
+            ps.setString(5, app);
+            ps.setString(6, actEnv);
+            ps.setString(7, expEnv);
         });
         log.info("registered {} ==> {}", ctx, id);
         return id;
+    }
+
+    @Override
+    public List<ApiTraceGroup> selectTraceGroup() {
+        String q = "SELECT ASR_GRP.VA_HST_USR, ASR_GRP.VA_HST_OS, ASR_GRP.VA_HST_ADR, ASR_GRP.VA_API_APP, ASR_GRP.VA_EXT_ENV, ASR_GRP.VA_ACT_ENV, ASR_REQ.RESULT, ASR_REQ.OK, ASR_REQ.SKIP" +
+                " FROM INNER JOIN (SELECT ID_ASR, COUNT(ID_ASR) as RESULT, COUNT(CASE WHEN VA_REQ_STT = 'OK' then 1 ELSE NULL END) as OK, COUNT(CASE WHEN VA_REQ_STT = 'SKIP' then 1 ELSE NULL END) as SKIP FROM ASR_REQ GROUP BY ID_ASR)" +
+                " as ASR_REQ ON ASR_REQ.ID_ASR = ASR_GRP.ID_ASR";
+        return template.query(q, (rs, i)->
+            new ApiTraceGroup(
+                    rs.getString("VA_HST_USR"),
+                    rs.getString("VA_HST_OS"),
+                    rs.getString("VA_HST_ADR"),
+                    rs.getString("VA_API_APP"),
+                    rs.getString("VA_EXT_ENV"),
+                    rs.getString("VA_ACT_ENV"),
+                    rs.getInt("RESULT"),
+                    rs.getInt("OK"),
+                    rs.getInt("SKIP")
+            )
+        );
     }
 }
