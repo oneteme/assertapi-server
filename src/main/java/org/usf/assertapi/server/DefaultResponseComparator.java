@@ -7,6 +7,7 @@ import org.skyscreamer.jsonassert.JSONCompareResult;
 import org.springframework.http.MediaType;
 import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.core.ResponseComparator;
+import org.usf.assertapi.server.exception.*;
 
 public final class DefaultResponseComparator implements ResponseComparator {
 

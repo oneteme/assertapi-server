@@ -66,9 +66,10 @@ public class StdDataPersister implements DataPersister {
 						rs.getString("VA_API_URI"),
 						rs.getString("VA_API_MTH"),
 						mapper.readValue(rs.getString("VA_API_HDR"), new TypeReference<Map<String, String>>(){}), 
-						rs.getString("VA_API_CHR"),
+//						rs.getString("VA_API_CHR"),
 						rs.getString("VA_API_NME"),
 						rs.getString("VA_API_DSC"),
+						(short)200,
 						conf);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
@@ -96,7 +97,7 @@ public class StdDataPersister implements DataPersister {
 				ps.setString(3, req.getMethod());
 				ps.setString(4, mapper.writeValueAsString(req.getHeaders()));
 				ps.setString(5, req.getBody());
-				ps.setString(6, req.getCharset());
+				ps.setString(6, "UTF8"); //TODO delete this
 				ps.setString(7, req.getName());
 				ps.setString(8, req.getDescription());
 				ps.setString(9, app);

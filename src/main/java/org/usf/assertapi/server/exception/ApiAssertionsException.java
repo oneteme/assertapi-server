@@ -1,4 +1,4 @@
-package org.usf.assertapi.server;
+package org.usf.assertapi.server.exception;
 
 @SuppressWarnings("serial")
 public class ApiAssertionsException extends RuntimeException {
