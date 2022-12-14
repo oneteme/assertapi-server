@@ -5,13 +5,14 @@ import java.util.Objects;
 
 import org.skyscreamer.jsonassert.JSONCompareResult;
 import org.springframework.http.MediaType;
+import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.core.ResponseComparator;
 
 public final class DefaultResponseComparator implements ResponseComparator {
 
 	@Override
-	public void assumeEnabled(boolean enable) {
-		if(!enable) {
+	public void assumeEnabled(ApiRequest query) {
+		if(!query.getConfiguration().isEnable()) {
 			throw new TestAbortException();
 		}
 	}

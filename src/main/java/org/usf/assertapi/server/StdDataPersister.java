@@ -16,7 +16,7 @@ import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.usf.assertapi.core.ApiAssertionsResult;
+import org.usf.assertapi.core.AssertionResult;
 import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.core.AssertionConfig;
 import org.usf.assertapi.core.AssertionContext;
@@ -153,7 +153,7 @@ public class StdDataPersister implements DataPersister {
 	}
 
 	@Override
-	public void trace(long id, @NonNull ApiAssertionsResult res) {
+	public void trace(long id, @NonNull AssertionResult res) {
 		var q = "INSERT INTO ASR_REQ(ID_ASR, ID_REQ, VA_EXT_HST, VA_ACT_HST, "
 				+ "DH_EXT_STR, DH_EXT_END, DH_ACT_STR, DH_ACT_END, VA_REQ_STT, VA_REQ_STP) "
 				+ "VALUES(?,?,?,?,?,?,?,?,?,?)";

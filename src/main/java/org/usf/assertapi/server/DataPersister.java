@@ -2,7 +2,7 @@ package org.usf.assertapi.server;
 
 import java.util.List;
 
-import org.usf.assertapi.core.ApiAssertionsResult;
+import org.usf.assertapi.core.AssertionResult;
 import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.core.AssertionContext;
 
@@ -18,6 +18,6 @@ public interface DataPersister {
 
 	long register(AssertionContext ctx);
 
-	void trace(long id, ApiAssertionsResult list);
+	void trace(long id, AssertionResult list);
 
 }

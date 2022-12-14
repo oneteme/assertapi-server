@@ -19,8 +19,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.usf.assertapi.core.ApiAssertionsFactory;
-import org.usf.assertapi.core.ApiAssertionsResult;
+import org.usf.assertapi.core.ApiAssertionFactory;
+import org.usf.assertapi.core.AssertionResult;
 import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.core.ServerConfig;
 
@@ -76,20 +76,20 @@ public class MainController {
 	}
 	
 	@PutMapping("trace")
-	public void trace(@RequestHeader(CTX_ID) long ctx, @RequestBody ApiAssertionsResult result) {
+	public void trace(@RequestHeader(CTX_ID) long ctx, @RequestBody AssertionResult result) {
 		service.trace(ctx, result);
 	}
 	
 	@PostMapping("run")
-	public List<ApiAssertionsResult> run(
+	public List<AssertionResult> run(
 			@RequestParam(name="app", required = false) String app,
 			@RequestParam(name="env", required = false) String env,
 			@RequestBody Configuration config) {
 
 		var ctx = service.register(buildContext());
-		List<ApiAssertionsResult> results = new LinkedList<>();
+		List<AssertionResult> results = new LinkedList<>();
 		var list = requests(app, env);
-		var assertions = new ApiAssertionsFactory()
+		var assertions = new ApiAssertionFactory()
 				.comparing(config.getRefer(), config.getTarget())
 				.using(new DefaultResponseComparator())
 				.trace(a-> service.trace(ctx, a))
