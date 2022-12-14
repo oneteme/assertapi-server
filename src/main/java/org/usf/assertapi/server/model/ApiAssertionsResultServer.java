@@ -1,13 +1,11 @@
 package org.usf.assertapi.server.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.usf.assertapi.core.ApiAssertionsResult;
 import org.usf.assertapi.core.ApiRequest;
-
-import java.util.List;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
@@ -15,8 +13,7 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 @Getter
 @JsonInclude(NON_NULL)
 @RequiredArgsConstructor
-@AllArgsConstructor
-public class ApiRequestServer {
+public class ApiAssertionsResultServer {
+    private final ApiAssertionsResult result;
     private final ApiRequest request;
-    private List<ApiRequestGroupServer> requestGroupList;
 }
