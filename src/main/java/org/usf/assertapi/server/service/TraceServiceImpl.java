@@ -2,11 +2,13 @@ package org.usf.assertapi.server.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.usf.assertapi.core.ApiAssertionsResult;
 import org.usf.assertapi.core.AssertionContext;
 import org.usf.assertapi.server.dao.TraceDao;
 import org.usf.assertapi.server.model.ApiAssertionsResultServer;
 import org.usf.assertapi.server.model.ApiTraceGroup;
+import org.usf.assertapi.server.model.TraceGroupStatus;
 
 import java.util.List;
 
@@ -16,8 +18,8 @@ public class TraceServiceImpl implements TraceService {
     private final TraceDao dao;
 
     @Override
-    public List<ApiAssertionsResultServer> getTraces(long[] ids) {
-        return dao.select(ids);
+    public List<ApiAssertionsResultServer> getTraces(long[] ids, List<String> status) {
+        return dao.select(ids, status);
     }
 
     @Override
@@ -26,12 +28,17 @@ public class TraceServiceImpl implements TraceService {
     }
 
     @Override
-    public long register(AssertionContext ctx, String app, String actEnv, String expEnv) {
-        return dao.register(ctx, app, actEnv, expEnv);
+    public long register(AssertionContext ctx, String app, String actEnv, String expEnv, TraceGroupStatus status) {
+        return dao.register(ctx, app, actEnv, expEnv, status);
     }
 
     @Override
-    public List<ApiTraceGroup> getTraceGroups() {
-        return dao.selectTraceGroup();
+    public void updateStatus(long id, TraceGroupStatus status){
+        dao.updateStatus(id, status);
+    }
+
+    @Override
+    public List<ApiTraceGroup> getTraceGroups(Long id) {
+        return dao.selectTraceGroup(id);
     }
 }

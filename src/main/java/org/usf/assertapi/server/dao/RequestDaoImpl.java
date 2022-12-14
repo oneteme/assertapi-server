@@ -51,7 +51,7 @@ public class RequestDaoImpl implements RequestDao {
             }
         }
 
-        q.append(" ORDER BY API_REQ.ID_REQ ASC");
+        q.append(" ORDER BY API_REQ.VA_API_NME ASC");
 
         var list = template.query(q.toString(), args.toArray(), rs-> {
             long actualId = 0;

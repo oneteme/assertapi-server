@@ -8,8 +8,6 @@ import org.usf.assertapi.server.exception.EmptyListException;
 import org.usf.assertapi.server.exception.TooManyListException;
 import org.usf.assertapi.server.model.ApiRequestServer;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 @Service
