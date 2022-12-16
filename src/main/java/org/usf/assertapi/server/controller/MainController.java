@@ -42,10 +42,9 @@ public class MainController {
 	private final RequestService requestService;
 	private final SseService sseService;
 
+	//TODO change it to PathParam (ctx=>id)
 	@GetMapping("/subscribe")
-	public SseEmitter eventEmitter(
-			@RequestParam(name="ctx") long ctx
-	) {
+	public SseEmitter eventEmitter(@RequestParam(name="ctx") long ctx) {
 		return sseService.subscribe(ctx);
 	}
 
@@ -53,7 +52,7 @@ public class MainController {
 	public void run(
 			@RequestHeader(value = "ctx") long ctx,
 			@RequestParam(name="app") String app,
-			@RequestParam(name="actual_env") String actualEnv,
+			@RequestParam(name="actual_env") String actualEnv, //optional
 			@RequestParam(name="expected_env") String expectedEnv,
 			@RequestParam(name="id", required = false) int[] ids,
 			@RequestParam(name="disabled_id", required = false) int[] disabledIds,
