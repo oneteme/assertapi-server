@@ -1,5 +1,7 @@
 package org.usf.assertapi.server.service;
 
+import static org.usf.assertapi.server.model.TraceGroupStatus.PENDING;
+
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -15,7 +17,8 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class TraceServiceImpl implements TraceService {
-    private final TraceDao dao;
+    
+	private final TraceDao dao;
 
     @Override
     public List<AssertionResultServer> getTraces(long[] ids, List<String> status) {
@@ -28,8 +31,8 @@ public class TraceServiceImpl implements TraceService {
     }
 
     @Override
-    public long register(AssertionContext ctx, String app, String latestRelease, String stableRelease, TraceGroupStatus status) {
-        return dao.register(ctx, app, latestRelease, stableRelease, status);
+    public long register(AssertionContext ctx, String app, String latestRelease, String stableRelease) {
+        return dao.register(ctx, app, latestRelease, stableRelease, PENDING);
     }
 
     @Override

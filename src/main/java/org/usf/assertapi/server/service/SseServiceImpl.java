@@ -1,71 +1,82 @@
 package org.usf.assertapi.server.service;
 
+import static java.util.Map.entry;
+import static org.usf.assertapi.server.model.ApiTraceStatistic.NO_STAT;
+import static org.usf.assertapi.server.model.TraceGroupStatus.ABORTED;
+import static org.usf.assertapi.server.model.TraceGroupStatus.FINISH;
+
 import java.io.IOException;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.usf.assertapi.core.AssertionResult;
-import org.usf.assertapi.server.model.ApiTraceGroup;
-import org.usf.assertapi.server.model.ApiTraceGroupSse;
+import org.usf.assertapi.server.model.ApiTraceStatistic;
 import org.usf.assertapi.server.model.TraceGroupStatus;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
-public class SseServiceImpl implements SseService {
+public final class SseServiceImpl implements SseService {
 
-    private final Map<Long, ApiTraceGroupSse> sseEmitters = new ConcurrentHashMap<>();
-    private final BiConsumer<Long, TraceGroupStatus> statusConsumer;
-
-    @Override
-    public SseEmitter init(long id) {
-        SseEmitter sseEmitter = new SseEmitter(Long.MAX_VALUE); //TIMEOUT
-        sseEmitter.onCompletion(() -> {
-            sseEmitters.remove(id);
-            statusConsumer.accept(id, TraceGroupStatus.FINISH);
-        });
-        sseEmitter.onTimeout(() -> {
-            sseEmitters.remove(id);
-            statusConsumer.accept(id, TraceGroupStatus.ABORTED);
-        });
-        sseEmitters.put(id, new ApiTraceGroupSse(sseEmitter));
-        return sseEmitter;
-    }
-
-    @Override
-    public void start(long id, ApiTraceGroup apiTraceGroup) {
-        sseEmitters.get(id).setApiTraceGroup(apiTraceGroup);
-        update(id, null);
-    }
-
-    @Override
-    public void update(long id, AssertionResult result) {
-        try {
-            ApiTraceGroupSse apiTraceGroupSse = sseEmitters.get(id);
-            if(apiTraceGroupSse != null) {
-                ApiTraceGroup apiTraceGroup = apiTraceGroupSse.getApiTraceGroup();
-                if(result != null) {
-                    apiTraceGroup.append(result.getStatus());
-                }
-                sseEmitters.get(id).getSseEmitter().send(SseEmitter.event().name("result").data(apiTraceGroup));
-            }
-        } catch (IOException e) {
-            log.error("server sent events fail", e);
-            throw new RuntimeException(e);
-        }
-    }
+    private static final Map<Long, Entry<ApiTraceStatistic, SseEmitter>> sseEmitters = new ConcurrentHashMap<>();
+    private final BiConsumer<Long, TraceGroupStatus> action;
 
     @Override
     public SseEmitter subscribe(long id) {
-        return sseEmitters.get(id).getSseEmitter();
+        return sseEmitters.get(id).getValue();
+    }
+    
+    @Override
+    public void init(long id) {
+        sseEmitters.put(id, entry(NO_STAT, newSseEmitter(id)));
     }
 
     @Override
-    public void complete(long id) {
-        sseEmitters.get(id).getSseEmitter().complete();
+    public void start(long id, ApiTraceStatistic stat) {
+    	SseEmitter sse = sseEmitters.containsKey(id) 
+    			? sseEmitters.remove(id).getValue()
+    			: newSseEmitter(id);
+        sseEmitters.put(id, entry(stat, sse));
+        safeSend(sse, stat);
+    }
+
+    @Override
+    public void update(long id, @NonNull AssertionResult result) {
+        var entry = sseEmitters.get(id);
+        if(entry != null) {
+            var stat = entry.getKey();
+            stat.append(result.getStatus());
+            var sse = entry.getValue();
+            safeSend(sse, stat);
+            if(stat.isComplete()) {
+            	sse.complete();
+            }
+        }
+    }
+    
+    private SseEmitter newSseEmitter(long id) {
+        SseEmitter sse = new SseEmitter(10 * 60 * 1000l); //TIMEOUT 10min
+        sse.onCompletion(() -> complete(id));
+        sse.onTimeout(() -> complete(id));
+        return sse;
+    }
+    
+    private void complete(long id) {
+        var o = sseEmitters.remove(id);
+        action.accept(id, o.getKey().isComplete() ? FINISH : ABORTED);
+    }
+    
+    private static void safeSend(SseEmitter sse, ApiTraceStatistic stat) {
+        try {
+            sse.send(stat);
+        } catch (IOException e) {
+            log.error("server sent events fail", e);
+        }
     }
 }

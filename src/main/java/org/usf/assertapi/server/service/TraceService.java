@@ -14,7 +14,7 @@ public interface TraceService {
 
     void addTrace(long id, AssertionResult res);
 
-    long register(AssertionContext ctx, String app, String latestRelease, String stableRelease, TraceGroupStatus status);
+    long register(AssertionContext ctx, String app, String latestRelease, String stableRelease);
 
     void updateStatus(long id, TraceGroupStatus status);
 
