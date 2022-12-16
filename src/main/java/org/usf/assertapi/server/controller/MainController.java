@@ -4,6 +4,7 @@ import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.of;
+import static org.usf.assertapi.core.AssertionContext.CTX;
 import static org.usf.assertapi.core.AssertionContext.buildContext;
 
 import java.io.IOException;
@@ -13,9 +14,12 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.usf.assertapi.core.*;
@@ -27,20 +31,28 @@ import org.usf.assertapi.server.model.*;
 import org.usf.assertapi.server.DefaultResponseComparator;
 import org.usf.assertapi.server.service.RequestService;
 import org.usf.assertapi.server.service.SseService;
+import org.usf.assertapi.server.service.SseServiceImpl;
 import org.usf.assertapi.server.service.TraceService;
-
 
 @Slf4j
 @CrossOrigin
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/v1/assert/api")
 public class MainController {
 
+	private final RequestService requestService;
 	private final TraceController traceController;
 	private final TraceService traceService;
-	private final RequestService requestService;
+	private final RequestController requestController;
 	private final SseService sseService;
+
+	public MainController(RequestService requestService, TraceController traceController, TraceService traceService, RequestController requestController) {
+		this.requestService = requestService;
+		this.traceController = traceController;
+		this.traceService = traceService;
+		this.requestController = requestController;
+		this.sseService = new SseServiceImpl(traceService::updateStatus);
+	}
 
 	//TODO change it to PathParam (ctx=>id)
 	@GetMapping("/subscribe")
@@ -48,46 +60,53 @@ public class MainController {
 		return sseService.subscribe(ctx);
 	}
 
-	@PostMapping("run")
-	public void run(
-			@RequestHeader(value = "ctx") long ctx,
+	@PostMapping("load")
+	public ResponseEntity<List<ApiRequest>> load(
+			@RequestHeader(value = CTX) String context,
 			@RequestParam(name="app") String app,
-			@RequestParam(name="actual_env") String actualEnv, //optional
-			@RequestParam(name="expected_env") String expectedEnv,
-			@RequestParam(name="id", required = false) int[] ids,
-			@RequestParam(name="disabled_id", required = false) int[] disabledIds,
-			@RequestBody Configuration config) {
+			@RequestParam(name="stable_release") String stableRelease) {
+		var ctx = AssertionContext.parseHeader(new ObjectMapper(), context);
+		var id = traceService.register(ctx, app, ctx.getAddress(), stableRelease, TraceGroupStatus.PENDING);
+		sseService.init(id);
+		var list = requestController.get(null, app, List.of(stableRelease));
+		sseService.start(id, new ApiTraceGroup(id, ctx.getUser(), ctx.getOs(), ctx.getAddress(), app,  ctx.getAddress(), stableRelease, TraceGroupStatus.PENDING, list.size(), (int) list.stream().filter(l -> !l.getConfiguration().isEnable()).count()));
 
-		List<String> envs = asList(actualEnv, expectedEnv);
-		var list = requestService.getRequestList(ids, envs, app).stream()
+		HttpHeaders responseHeaders = new HttpHeaders();
+		responseHeaders.set("trace", "/v1/assert/api/trace/" + id);
+
+		return ResponseEntity.ok().headers(responseHeaders).body(list);
+	}
+
+	@PostMapping("run")
+	public long run(
+			@RequestParam(name="app") String app,
+			@RequestParam(name="latest_release") String latestRelease,
+			@RequestParam(name="stable_release") String stableRelease,
+			@RequestParam(name="id", required = false) int[] ids,
+			@RequestParam(name="excluded", required = false) boolean excluded,
+			@RequestBody Configuration config) {
+		var id = traceService.register(buildContext(), app, latestRelease, stableRelease, TraceGroupStatus.PENDING);
+		sseService.init(id);
+		List<String> envs = asList(latestRelease, stableRelease);
+		var list = requestController.getAll(!excluded ? ids : null, app, envs).stream()
 				.filter(r -> r.getRequestGroupList().stream().map(ApiRequestGroupServer::getEnv).collect(toList()).containsAll(envs))
 				.map(ApiRequestServer::getRequest)
 				.collect(toList());
-		if(disabledIds != null) {
-			of(disabledIds).forEach(i-> list.stream().filter(t-> t.getId() == i).findAny().ifPresent(t-> t.getConfiguration().setEnable(false)));
+		if(excluded && ids != null) {
+			of(ids).forEach(i-> list.stream().filter(t-> t.getId() == i).findAny().ifPresent(t-> t.getConfiguration().setEnable(false)));
 		}
-		sseService.start(ctx, new ApiTraceGroup(ctx, buildContext().getUser(), buildContext().getOs(), buildContext().getAddress(), app, actualEnv, expectedEnv, TraceGroupStatus.PENDING, list.size(), (int) list.stream().filter(l -> !l.getConfiguration().isEnable()).count()));
+		sseService.start(id, new ApiTraceGroup(id, buildContext().getUser(), buildContext().getOs(), buildContext().getAddress(), app, latestRelease, stableRelease, TraceGroupStatus.PENDING, list.size(), (int) list.stream().filter(l -> !l.getConfiguration().isEnable()).count()));
 
 		var assertions = new ApiAssertionFactory()
 				.comparing(config.getRefer(), config.getTarget())
 				.using(new DefaultResponseComparator())
 				.trace(a-> {
-					traceService.addTrace(ctx, a);
-					sseService.update(ctx, a);
+					traceController.put(id, a);
+					sseService.update(id, a);
 				})
 				.build();
-		list.forEach(q-> {
-			try {
-				assertions.assertApi(q);
-				log.info("TEST {} OK", q);
-			}
-			catch(Throwable e) {
-				//fail
-				log.error("assertion fail", e);
-			}
-		});
-		sseService.complete(ctx);
-		// update register pour la fin du test
+		assertions.assertApiAsync(list, () -> sseService.complete(id));
+		return id;
 	}
 
 	@PostMapping("run/{id}")
@@ -133,8 +152,9 @@ public class MainController {
 			//fail
 			log.error("assertion fail", e);
 		}
-
-		return new ResponseComparator(expectedResponse, actualResponse);
+		responseComparator.setAct(actualResponse);
+		responseComparator.setExp(expectedResponse);
+		return responseComparator;
 	}
 
 	@Getter
@@ -153,10 +173,5 @@ public class MainController {
 		private ApiResponseServer act;
 		private TestStatus status;
 		private TestStep step;
-
-		ResponseComparator(ApiResponseServer exp, ApiResponseServer act) {
-			this.exp = exp;
-			this.act = act;
-		}
 	}
 }

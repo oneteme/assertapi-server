@@ -5,13 +5,13 @@ import org.usf.assertapi.core.AssertionResult;
 import org.usf.assertapi.server.model.ApiTraceGroup;
 
 public interface SseService {
-    SseEmitter init(long ctx);
+    SseEmitter init(long id);
 
-    void start(long ctx, ApiTraceGroup apiTraceGroup);
+    void start(long id, ApiTraceGroup apiTraceGroup);
 
-    void update(long ctx, AssertionResult result);
+    void update(long id, AssertionResult result);
 
-    SseEmitter subscribe(long ctx);
+    SseEmitter subscribe(long id);
 
-    void complete(long ctx);
+    void complete(long id);
 }

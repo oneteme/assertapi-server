@@ -25,8 +25,8 @@ public class RequestController {
     public List<ApiRequest> get(
             @RequestParam(name="id", required = false) int[] ids,
             @RequestParam(name="app", required = false) String app,
-            @RequestParam(name="env", required = false) String env) {
-        return getAll(ids, app, env).stream().map(ApiRequestServer::getRequest).collect(Collectors.toList());
+            @RequestParam(name="env", required = false) List<String> envs) {
+        return getAll(ids, app, envs).stream().map(ApiRequestServer::getRequest).collect(Collectors.toList());
     }
 
     @PutMapping
@@ -49,8 +49,8 @@ public class RequestController {
     public List<ApiRequestServer> getAll(
             @RequestParam(name="id", required = false) int[] ids,
             @RequestParam(name="app", required = false) String app,
-            @RequestParam(name="env", required = false) String env) {
-        return service.getRequestList(ids, env != null ? List.of(env) : new ArrayList<>(), app);
+            @RequestParam(name="env", required = false) List<String> envs) {
+        return service.getRequestList(ids, envs != null ? envs : new ArrayList<>(), app);
     }
 
     @PatchMapping("enable")

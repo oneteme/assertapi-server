@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import org.usf.assertapi.core.AssertionContext;
 import org.usf.assertapi.core.AssertionResult;
 import org.usf.assertapi.server.dao.TraceDao;
-import org.usf.assertapi.server.model.ApiAssertionsResultServer;
+import org.usf.assertapi.server.model.AssertionResultServer;
 import org.usf.assertapi.server.model.ApiTraceGroup;
 import org.usf.assertapi.server.model.TraceGroupStatus;
 
@@ -18,7 +18,7 @@ public class TraceServiceImpl implements TraceService {
     private final TraceDao dao;
 
     @Override
-    public List<ApiAssertionsResultServer> getTraces(long[] ids, List<String> status) {
+    public List<AssertionResultServer> getTraces(long[] ids, List<String> status) {
         return dao.select(ids, status);
     }
 
@@ -28,8 +28,8 @@ public class TraceServiceImpl implements TraceService {
     }
 
     @Override
-    public long register(AssertionContext ctx, String app, String actEnv, String expEnv, TraceGroupStatus status) {
-        return dao.register(ctx, app, actEnv, expEnv, status);
+    public long register(AssertionContext ctx, String app, String latestRelease, String stableRelease, TraceGroupStatus status) {
+        return dao.register(ctx, app, latestRelease, stableRelease, status);
     }
 
     @Override
