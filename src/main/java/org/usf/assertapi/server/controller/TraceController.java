@@ -32,8 +32,8 @@ public class TraceController {
     }
 
     @PutMapping("{" + CTX_ID + "}")
-    public void put(@PathVariable(CTX_ID) long ctx, @RequestBody AssertionResult result) {
-        service.addTrace(ctx, result);
+    public void put(@PathVariable(CTX_ID) long id, @RequestBody AssertionResult result) {
+        service.addTrace(id, result);
     }
 
     @GetMapping("group")
