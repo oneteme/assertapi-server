@@ -22,8 +22,6 @@ import static org.usf.assertapi.core.AssertionContext.*;
 @RequestMapping("/v1/assert/api/trace")
 public class TraceController {
     private final TraceService service;
-    private final SseService sseService;
-    private final ObjectMapper mapper;
 
     @GetMapping
     public List<AssertionResultServer> get(
@@ -33,22 +31,9 @@ public class TraceController {
         return service.getTraces(ids, status);
     }
 
-    @PutMapping
-    public void put(@RequestHeader(CTX_ID) long ctx, @RequestBody AssertionResult result) {
+    @PutMapping("{" + CTX_ID + "}")
+    public void put(@PathVariable(CTX_ID) long ctx, @RequestBody AssertionResult result) {
         service.addTrace(ctx, result);
-    }
-
-    //TODO Required false for Ihm Header
-    @GetMapping("register")
-    public long register(
-            @RequestHeader(value = CTX, required = false) String context,
-            @RequestParam("app") String app,
-            @RequestParam("latest_release") String latestRelease,
-            @RequestParam("stable_release") String stableRelease
-    ) {
-        var ctx = service.register(context != null ? parseHeader(mapper, context) : buildContext(), app, latestRelease, stableRelease, TraceGroupStatus.PENDING);
-        sseService.init(ctx);
-        return ctx;
     }
 
     @GetMapping("group")

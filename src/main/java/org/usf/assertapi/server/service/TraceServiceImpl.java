@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TraceServiceImpl implements TraceService {
     private final TraceDao dao;
-    private final SseService sseService;
 
     @Override
     public List<AssertionResultServer> getTraces(long[] ids, List<String> status) {
@@ -26,7 +25,6 @@ public class TraceServiceImpl implements TraceService {
     @Override
     public void addTrace(long id, AssertionResult res) {
         dao.insert(id, res);
-        sseService.update(id, res);
     }
 
     @Override
