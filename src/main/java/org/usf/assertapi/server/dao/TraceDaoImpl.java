@@ -7,7 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import org.usf.assertapi.core.*;
-import org.usf.assertapi.server.model.ApiAssertionsResultServer;
+import org.usf.assertapi.server.model.AssertionResultServer;
 import org.usf.assertapi.server.model.ApiTraceGroup;
 import org.usf.assertapi.server.model.TraceGroupStatus;
 
@@ -27,7 +27,7 @@ public class TraceDaoImpl implements TraceDao {
     private final JdbcTemplate template;
 
     @Override
-    public List<ApiAssertionsResultServer> select(long[] ids, List<String> status) {
+    public List<AssertionResultServer> select(long[] ids, List<String> status) {
         List<Object> args = new LinkedList<>();
         StringBuilder q = new StringBuilder("SELECT ASR_REQ.ID_ASR, ASR_REQ.VA_EXT_HST, ASR_REQ.VA_ACT_HST, ASR_REQ.DH_EXT_STR, ASR_REQ.DH_EXT_END, ASR_REQ.DH_ACT_STR,"
                 + " ASR_REQ.DH_ACT_END, ASR_REQ.VA_REQ_STT, ASR_REQ.VA_REQ_STP, API_REQ.ID_REQ, API_REQ.VA_API_URI, API_REQ.VA_API_MTH, API_REQ.VA_API_NME, API_REQ.VA_API_DSC"
@@ -71,7 +71,7 @@ public class TraceDaoImpl implements TraceDao {
                     (short)200,
                     null
             );
-            return new ApiAssertionsResultServer(
+            return new AssertionResultServer(
                     res,
                     req
             );
@@ -109,7 +109,7 @@ public class TraceDaoImpl implements TraceDao {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public long register(@NonNull AssertionContext ctx, String app, String actEnv, String expEnv, TraceGroupStatus status) {
+    public long register(@NonNull AssertionContext ctx, String app, String latestRelease, String stableRelease, TraceGroupStatus status) {
 
         var id = currentTimeMillis();
         var q = "INSERT INTO ASR_GRP(ID_ASR, VA_HST_USR, VA_HST_OS, VA_HST_ADR, VA_API_APP, VA_EXT_ENV, VA_ACT_ENV, VA_GRP_STT) VALUES(?,?,?,?,?,?,?,?)";
@@ -119,8 +119,8 @@ public class TraceDaoImpl implements TraceDao {
             ps.setString(3, ctx.getOs());
             ps.setString(4, ctx.getAddress());
             ps.setString(5, app);
-            ps.setString(6, actEnv);
-            ps.setString(7, expEnv);
+            ps.setString(6, latestRelease);
+            ps.setString(7, stableRelease);
             ps.setString(8, status.name());
         });
         log.info("registered {} ==> {}", ctx, id);
@@ -130,11 +130,11 @@ public class TraceDaoImpl implements TraceDao {
     @Override
     public List<ApiTraceGroup> selectTraceGroup(Long id) {
         List<Object> args = new LinkedList<>();
-        StringBuilder q = new StringBuilder("SELECT ASR_GRP.ID_ASR, ASR_GRP.VA_HST_USR, ASR_GRP.VA_HST_OS, ASR_GRP.VA_HST_ADR, ASR_GRP.VA_API_APP, ASR_GRP.VA_EXT_ENV, ASR_GRP.VA_ACT_ENV, ASR_GRP.VA_GRP_STT, ASR_REQ.RESULT, ASR_REQ.OK, ASR_REQ.SKIP" +
-                " FROM ASR_GRP LEFT JOIN (SELECT ID_ASR, COUNT(ID_ASR) as RESULT, COUNT(CASE WHEN VA_REQ_STT = 'OK' then 1 ELSE NULL END) as OK, COUNT(CASE WHEN VA_REQ_STT = 'SKIP' then 1 ELSE NULL END) as SKIP FROM ASR_REQ GROUP BY ID_ASR)" +
+        StringBuilder q = new StringBuilder("SELECT ASR_GRP.ID_ASR, ASR_GRP.VA_HST_USR, ASR_GRP.VA_HST_OS, ASR_GRP.VA_HST_ADR, ASR_GRP.VA_API_APP, ASR_GRP.VA_EXT_ENV, ASR_GRP.VA_ACT_ENV, ASR_GRP.VA_GRP_STT, ASR_REQ.RESULT, ASR_REQ.OK, ASR_REQ.SKIP, ASR_REQ.KO" +
+                " FROM ASR_GRP LEFT JOIN (SELECT ID_ASR, COUNT(ID_ASR) as RESULT, COUNT(CASE WHEN VA_REQ_STT = 'OK' then 1 ELSE NULL END) as OK, COUNT(CASE WHEN VA_REQ_STT = 'SKIP' then 1 ELSE NULL END) as SKIP, COUNT(CASE WHEN VA_REQ_STT = 'KO' then 1 WHEN VA_REQ_STT = 'FAIL' then 1 ELSE NULL END) as KO FROM ASR_REQ GROUP BY ID_ASR)" +
                 " as ASR_REQ ON ASR_REQ.ID_ASR = ASR_GRP.ID_ASR");
         if(id != null) {
-            q.append(" AND ASR_GRP.ID_ASR = ? ");
+            q.append(" WHERE ASR_GRP.ID_ASR = ? ");
             args.add(id);
         }
         q.append(" ORDER BY ASR_GRP.ID_ASR DESC");
@@ -151,7 +151,7 @@ public class TraceDaoImpl implements TraceDao {
                     rs.getInt("RESULT"),
                     rs.getInt("SKIP"),
                     rs.getInt("OK"),
-                    0
+                    rs.getInt("KO")
             )
         );
     }

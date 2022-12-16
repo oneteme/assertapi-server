@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.usf.assertapi.core.AssertionResult;
-import org.usf.assertapi.server.model.ApiAssertionsResultServer;
+import org.usf.assertapi.server.model.AssertionResultServer;
 import org.usf.assertapi.server.model.ApiTraceGroup;
 import org.usf.assertapi.server.model.TraceGroupStatus;
 import org.usf.assertapi.server.service.SseService;
@@ -26,7 +26,7 @@ public class TraceController {
     private final ObjectMapper mapper;
 
     @GetMapping
-    public List<ApiAssertionsResultServer> get(
+    public List<AssertionResultServer> get(
             @RequestParam(name="id", required = false) long[] ids,
             @RequestParam(name = "status", required = false) List<String> status
     ) {
@@ -43,10 +43,10 @@ public class TraceController {
     public long register(
             @RequestHeader(value = CTX, required = false) String context,
             @RequestParam("app") String app,
-            @RequestParam("actual_env") String actualEnv,
-            @RequestParam("expected_env") String expectedEnv
+            @RequestParam("latest_release") String latestRelease,
+            @RequestParam("stable_release") String stableRelease
     ) {
-        var ctx = service.register(context != null ? parseHeader(mapper, context) : buildContext(), app, actualEnv, expectedEnv, TraceGroupStatus.PENDING);
+        var ctx = service.register(context != null ? parseHeader(mapper, context) : buildContext(), app, latestRelease, stableRelease, TraceGroupStatus.PENDING);
         sseService.init(ctx);
         return ctx;
     }

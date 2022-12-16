@@ -15,7 +15,7 @@ import lombok.Setter;
 @Getter
 @JsonInclude(NON_NULL)
 @RequiredArgsConstructor
-public class ApiAssertionsResultServer {
+public class AssertionResultServer {
     private final AssertionResult result;
     private final ApiRequest request;
 }

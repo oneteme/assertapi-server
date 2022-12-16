@@ -37,9 +37,10 @@ import org.usf.assertapi.server.service.TraceService;
 @RequestMapping("/v1/assert/api")
 public class MainController {
 
-	private final TraceController traceController;
 	private final TraceService traceService;
 	private final RequestService requestService;
+	private final TraceController traceController;
+	private final RequestController requestController;
 	private final SseService sseService;
 
 	@GetMapping("/subscribe")
@@ -50,45 +51,31 @@ public class MainController {
 	}
 
 	@PostMapping("run")
-	public void run(
-			@RequestHeader(value = "ctx") long ctx,
+	public long run(
 			@RequestParam(name="app") String app,
-			@RequestParam(name="actual_env") String actualEnv,
-			@RequestParam(name="expected_env") String expectedEnv,
+			@RequestParam(name="latest_release") String latestRelease,
+			@RequestParam(name="stable_release") String stableRelease,
 			@RequestParam(name="id", required = false) int[] ids,
-			@RequestParam(name="disabled_id", required = false) int[] disabledIds,
+			@RequestParam(name="excluded", required = false) boolean excluded,
 			@RequestBody Configuration config) {
-
-		List<String> envs = asList(actualEnv, expectedEnv);
-		var list = requestService.getRequestList(ids, envs, app).stream()
+		var ctx = traceController.register(buildContext().toHeader(), app, latestRelease, stableRelease);
+		List<String> envs = asList(latestRelease, stableRelease);
+		var list = requestController.getAll(!excluded ? ids : null, app, envs).stream()
 				.filter(r -> r.getRequestGroupList().stream().map(ApiRequestGroupServer::getEnv).collect(toList()).containsAll(envs))
 				.map(ApiRequestServer::getRequest)
 				.collect(toList());
-		if(disabledIds != null) {
-			of(disabledIds).forEach(i-> list.stream().filter(t-> t.getId() == i).findAny().ifPresent(t-> t.getConfiguration().setEnable(false)));
+		if(excluded && ids != null) {
+			of(ids).forEach(i-> list.stream().filter(t-> t.getId() == i).findAny().ifPresent(t-> t.getConfiguration().setEnable(false)));
 		}
-		sseService.start(ctx, new ApiTraceGroup(ctx, buildContext().getUser(), buildContext().getOs(), buildContext().getAddress(), app, actualEnv, expectedEnv, TraceGroupStatus.PENDING, list.size(), (int) list.stream().filter(l -> !l.getConfiguration().isEnable()).count()));
+		sseService.start(ctx, new ApiTraceGroup(ctx, buildContext().getUser(), buildContext().getOs(), buildContext().getAddress(), app, latestRelease, stableRelease, TraceGroupStatus.PENDING, list.size(), (int) list.stream().filter(l -> !l.getConfiguration().isEnable()).count()));
 
 		var assertions = new ApiAssertionFactory()
 				.comparing(config.getRefer(), config.getTarget())
 				.using(new DefaultResponseComparator())
-				.trace(a-> {
-					traceService.addTrace(ctx, a);
-					sseService.update(ctx, a);
-				})
+				.trace(a-> traceService.addTrace(ctx, a))
 				.build();
-		list.forEach(q-> {
-			try {
-				assertions.assertApi(q);
-				log.info("TEST {} OK", q);
-			}
-			catch(Throwable e) {
-				//fail
-				log.error("assertion fail", e);
-			}
-		});
-		sseService.complete(ctx);
-		// update register pour la fin du test
+		assertions.assertApiAsync(list, () -> sseService.complete(ctx));
+		return ctx;
 	}
 
 	@PostMapping("run/{id}")
@@ -134,8 +121,9 @@ public class MainController {
 			//fail
 			log.error("assertion fail", e);
 		}
-
-		return new ResponseComparator(expectedResponse, actualResponse);
+		responseComparator.setAct(actualResponse);
+		responseComparator.setExp(expectedResponse);
+		return responseComparator;
 	}
 
 	@Getter
@@ -154,10 +142,5 @@ public class MainController {
 		private ApiResponseServer act;
 		private TestStatus status;
 		private TestStep step;
-
-		ResponseComparator(ApiResponseServer exp, ApiResponseServer act) {
-			this.exp = exp;
-			this.act = act;
-		}
 	}
 }
