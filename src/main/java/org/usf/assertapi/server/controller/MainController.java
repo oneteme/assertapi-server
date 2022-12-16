@@ -43,10 +43,9 @@ public class MainController {
 	private final RequestController requestController;
 	private final SseService sseService;
 
+	//TODO change it to PathParam (ctx=>id)
 	@GetMapping("/subscribe")
-	public SseEmitter eventEmitter(
-			@RequestParam(name="ctx") long ctx
-	) {
+	public SseEmitter eventEmitter(@RequestParam(name="ctx") long ctx) {
 		return sseService.subscribe(ctx);
 	}
 
