@@ -26,7 +26,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @RequestMapping("/v1/assert/api/request")
 public class RequestController {
-    private final RequestService service;
+    
+	private final RequestService service;
 
     @GetMapping
     public List<ApiRequest> get(

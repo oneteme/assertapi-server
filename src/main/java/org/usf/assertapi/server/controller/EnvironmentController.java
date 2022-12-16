@@ -9,7 +9,6 @@ import org.usf.assertapi.server.service.EnvironmentService;
 
 import java.util.List;
 
-@Slf4j
 @CrossOrigin
 @RestController
 @RequiredArgsConstructor
@@ -23,23 +22,17 @@ public class EnvironmentController {
     }
 
     @PutMapping
-    public long put(
-            @RequestBody ApiServerConfig serverConfig
-    ) {
+    public long put(@RequestBody ApiServerConfig serverConfig) {
         return service.addEnvironment(serverConfig);
     }
 
     @PostMapping
-    public void update(
-            @RequestBody ApiServerConfig serverConfig
-    ) {
+    public void update(@RequestBody ApiServerConfig serverConfig) {
         service.updateEnvironment(serverConfig);
     }
 
     @DeleteMapping
-    public void delete(
-            @RequestParam("id") int[] ids
-    ) {
+    public void delete(@RequestParam("id") int[] ids) {
         service.removeEnvironment(ids);
     }
 }

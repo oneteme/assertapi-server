@@ -71,7 +71,7 @@ public class MainController {
 	}
 
 	//TODO change it to PathParam (ctx=>id)
-	@GetMapping("/subscribe")
+	@GetMapping("subscribe")
 	public SseEmitter subscribe(@RequestParam(name="ctx") long ctx) {
 		return sseService.subscribe(ctx);
 	}

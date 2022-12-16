@@ -3,7 +3,7 @@ package org.usf.assertapi.server.service;
 import static java.util.Map.entry;
 import static org.usf.assertapi.server.model.ApiTraceStatistic.NO_STAT;
 import static org.usf.assertapi.server.model.TraceGroupStatus.ABORTED;
-import static org.usf.assertapi.server.model.TraceGroupStatus.FINISH;
+import static org.usf.assertapi.server.model.TraceGroupStatus.DONE;
 
 import java.io.IOException;
 import java.util.Map;
@@ -69,7 +69,7 @@ public final class SseServiceImpl implements SseService {
     
     private void complete(long id) {
         var o = sseEmitters.remove(id);
-        action.accept(id, o.getKey().isComplete() ? FINISH : ABORTED);
+        action.accept(id, o.getKey().isComplete() ? DONE : ABORTED);
     }
     
     private static void safeSend(SseEmitter sse, ApiTraceStatistic stat) {

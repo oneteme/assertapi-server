@@ -1,5 +1,6 @@
 package org.usf.assertapi.server.model;
 
 public enum TraceGroupStatus {
-    PENDING, FINISH, ABORTED;
+	
+    PENDING, DONE, ABORTED;
 }

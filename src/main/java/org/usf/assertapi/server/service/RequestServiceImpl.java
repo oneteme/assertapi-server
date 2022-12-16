@@ -4,8 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.usf.assertapi.server.dao.RequestDao;
-import org.usf.assertapi.server.exception.EmptyListException;
-import org.usf.assertapi.server.exception.TooManyListException;
+import org.usf.assertapi.server.exception.NotFoundException;
+import org.usf.assertapi.server.exception.TooManyResultException;
 import org.usf.assertapi.server.model.ApiRequestServer;
 
 import java.util.List;
@@ -25,9 +25,9 @@ public class RequestServiceImpl implements RequestService {
         int[] ids = {id};
         var requests = getRequestList(ids, null, null);
         if(requests == null || requests.isEmpty()) {
-            throw new EmptyListException();
+            throw new NotFoundException();
         } else if (requests.size() > 1) {
-            throw new TooManyListException();
+            throw new TooManyResultException(); 
         }
         return requests.iterator().next();
     }
