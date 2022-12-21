@@ -36,7 +36,7 @@
       <artifactId>lombok</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.usf.assertapi</groupId>
+      <groupId>io.github.oneteme.assertapi</groupId>
       <artifactId>assertapi-core</artifactId>
       <version>0.0.1-SNAPSHOT</version>
     </dependency>
