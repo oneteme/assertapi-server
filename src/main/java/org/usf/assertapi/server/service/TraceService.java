@@ -2,7 +2,7 @@ package org.usf.assertapi.server.service;
 
 import java.util.List;
 
-import org.usf.assertapi.core.AssertionContext;
+import org.usf.assertapi.core.AssertionEnvironement;
 import org.usf.assertapi.core.AssertionResult;
 import org.usf.assertapi.server.model.AssertionResultServer;
 import org.usf.assertapi.server.model.ApiTraceGroup;
@@ -14,7 +14,7 @@ public interface TraceService {
 
     void addTrace(long id, AssertionResult res);
 
-    long register(AssertionContext ctx, String app, String latestRelease, String stableRelease);
+    long register(AssertionEnvironement ctx, String app, String latestRelease, String stableRelease);
 
     void updateStatus(long id, TraceGroupStatus status);
 

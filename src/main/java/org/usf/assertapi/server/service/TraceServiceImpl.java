@@ -5,7 +5,7 @@ import static org.usf.assertapi.server.model.TraceGroupStatus.PENDING;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
-import org.usf.assertapi.core.AssertionContext;
+import org.usf.assertapi.core.AssertionEnvironement;
 import org.usf.assertapi.core.AssertionResult;
 import org.usf.assertapi.server.dao.TraceDao;
 import org.usf.assertapi.server.model.AssertionResultServer;
@@ -31,7 +31,7 @@ public class TraceServiceImpl implements TraceService {
     }
 
     @Override
-    public long register(AssertionContext ctx, String app, String latestRelease, String stableRelease) {
+    public long register(AssertionEnvironement ctx, String app, String latestRelease, String stableRelease) {
         return dao.register(ctx, app, latestRelease, stableRelease, PENDING);
     }
 

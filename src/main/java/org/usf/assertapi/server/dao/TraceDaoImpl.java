@@ -44,15 +44,17 @@ public class TraceDaoImpl implements TraceDao {
         }
         q.append(" ORDER BY ASR_REQ.ID_ASR DESC");
         var list = template.query(q.toString(), args.toArray(), (rs, i)-> {
-            var expConf = new RequestExecution(
-                    rs.getString("VA_EXT_HST"),
+            var expConf = new ExecutionInfo(
+//                    rs.getString("VA_EXT_HST"),
                     rs.getDate("DH_EXT_STR").getTime(),
-                    rs.getDate("DH_EXT_END").getTime()
+                    rs.getDate("DH_EXT_END").getTime(),
+                    0 //TODO add column size
             );
-            var actConf = new RequestExecution(
-                    rs.getString("VA_ACT_HST"),
+            var actConf = new ExecutionInfo(
+//                    rs.getString("VA_ACT_HST"),
                     rs.getDate("DH_ACT_STR").getTime(),
-                    rs.getDate("DH_ACT_END").getTime()
+                    rs.getDate("DH_ACT_END").getTime(),
+                    0 //TODO add column size
             );
             var res = new AssertionResult(
                     rs.getLong("ID_ASR"),
@@ -69,7 +71,8 @@ public class TraceDaoImpl implements TraceDao {
                     rs.getString("VA_API_NME"),
                     rs.getString("VA_API_DSC"),
                     (short)200,
-                    null
+                    null,//TODO
+                    null //TODO
             );
             return new AssertionResultServer(
                     res,
@@ -95,8 +98,8 @@ public class TraceDaoImpl implements TraceDao {
             else {
                 ps.setLong(2, res.getId());
             }
-            ps.setString(3, res.getExpExecution().getHost());
-            ps.setString(4, res.getActExecution().getHost());
+//            ps.setString(3, res.getExpExecution().getHost());
+//            ps.setString(4, res.getActExecution().getHost());
             ps.setTimestamp(5, ofEpochMilli(res.getExpExecution().getStart()));
             ps.setTimestamp(6, ofEpochMilli(res.getExpExecution().getEnd()));
             ps.setTimestamp(7, ofEpochMilli(res.getActExecution().getStart()));
@@ -109,7 +112,7 @@ public class TraceDaoImpl implements TraceDao {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public long register(@NonNull AssertionContext ctx, String app, String latestRelease, String stableRelease, TraceGroupStatus status) {
+    public long register(@NonNull AssertionEnvironement ctx, String app, String latestRelease, String stableRelease, TraceGroupStatus status) {
 
         var id = currentTimeMillis();
         var q = "INSERT INTO ASR_GRP(ID_ASR, VA_HST_USR, VA_HST_OS, VA_HST_ADR, VA_API_APP, VA_EXT_ENV, VA_ACT_ENV, VA_GRP_STT) VALUES(?,?,?,?,?,?,?,?)";

@@ -6,15 +6,14 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.of;
 import static org.springframework.http.ResponseEntity.ok;
-import static org.usf.assertapi.core.AssertionContext.CTX;
-import static org.usf.assertapi.core.AssertionContext.buildContext;
-import static org.usf.assertapi.core.AssertionContext.parseHeader;
+import static org.usf.assertapi.core.AssertionEnvironement.buildContext;
+import static org.usf.assertapi.core.AssertionEnvironement.from;
 import static org.usf.assertapi.server.model.ApiTraceStatistic.from;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,15 +26,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.usf.assertapi.core.ApiAssertionFactory;
+import org.usf.assertapi.core.ApiDefaultAssertion;
 import org.usf.assertapi.core.ApiRequest;
-import org.usf.assertapi.core.DefaultApiAssertion;
-import org.usf.assertapi.core.RequestExecution;
+import org.usf.assertapi.core.JsonResponseCompareConfig;
 import org.usf.assertapi.core.ResponseProxyComparator;
 import org.usf.assertapi.core.RestTemplateBuilder;
 import org.usf.assertapi.core.ServerConfig;
 import org.usf.assertapi.core.TestStatus;
 import org.usf.assertapi.core.TestStep;
-import org.usf.assertapi.server.DefaultResponseComparator;
 import org.usf.assertapi.server.model.ApiRequestGroupServer;
 import org.usf.assertapi.server.model.ApiRequestServer;
 import org.usf.assertapi.server.model.ApiResponseServer;
@@ -43,8 +41,6 @@ import org.usf.assertapi.server.service.RequestService;
 import org.usf.assertapi.server.service.SseService;
 import org.usf.assertapi.server.service.SseServiceImpl;
 import org.usf.assertapi.server.service.TraceService;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -78,11 +74,11 @@ public class MainController {
 
 	@GetMapping("load")
 	public ResponseEntity<List<ApiRequest>> load(
-			@RequestHeader(value = CTX) String context,
+			@RequestHeader Map<String, String> headers,
 			@RequestParam(name="app") String app,
 			@RequestParam(name="stable_release") String stableRelease) {
 		
-		var ctx = parseHeader(new ObjectMapper(), context);
+		var ctx = from(headers::get);
 		var id = traceService.register(ctx, app, ctx.getAddress(), stableRelease); //latest <= dev machine
 		var list = requestController.get(null, app, singletonList(stableRelease));
 		sseService.start(id, from(list));
@@ -105,16 +101,15 @@ public class MainController {
 		
 		new ApiAssertionFactory()
 		.comparing(config.getRefer(), config.getTarget())
-		.using(new DefaultResponseComparator())
 		.trace(a-> {
 			traceService.addTrace(id, a);
 			sseService.update(id, a);
 		})
 		.build()
-		.execAsync(()->{
+		.assertAllAsync(()->{
 			var list = requests(app, latestRelease, stableRelease, ids, excluded);
 			sseService.start(id, from(list));
-			return list;
+			return list.stream();
 		});
 		return id;
 	}
@@ -128,7 +123,7 @@ public class MainController {
 				.map(ApiRequestServer::getRequest)
 				.collect(toList());
 		if(excluded && ids != null) { //TODO else ? 
-			of(ids).forEach(i-> list.stream().filter(t-> t.getId() == i).findAny().ifPresent(t-> t.getConfiguration().setEnable(false)));
+			of(ids).forEach(i-> list.stream().filter(t-> t.getId() == i).findAny().ifPresent(t-> t.getExecConfig().disable()));
 		}
 		return list;
 	}
@@ -142,19 +137,19 @@ public class MainController {
 		var expectedResponse = new ApiResponseServer();
 		var actualResponse = new ApiResponseServer();
 		var request = requestService.getRequestOne(id);
-		var assertions = new DefaultApiAssertion(
-				new ResponseProxyComparator(new DefaultResponseComparator(), t -> {responseComparator.setStatus(t.getStatus()); responseComparator.setStep(t.getStep());}, new RequestExecution(config.refer.buildRootUrl()), new RequestExecution(config.target.buildRootUrl())){
+		var assertions = new ApiDefaultAssertion(
+				new ResponseProxyComparator(new org.usf.assertapi.core.ResponseComparator(), t -> {responseComparator.setStatus(t.getStatus()); responseComparator.setStep(t.getStep());}){
 					@Override
-					public void assertJsonContent(String expectedContent, String actualContent, boolean strict) {
+					public void assertJsonContent(String expectedContent, String actualContent, JsonResponseCompareConfig strict) {
 						expectedResponse.setResponse(expectedContent);
 						actualResponse.setResponse(actualContent);
 						super.assertJsonContent(expectedContent, actualContent, strict);
 					}
 
 					@Override
-					public void assertContentType(MediaType expectedContentType, MediaType actualContentType) {
-						expectedResponse.setContentType(expectedContentType.toString());
-						actualResponse.setContentType(actualContentType.toString());
+					public void assertContentType(String expectedContentType, String actualContentType) {
+						expectedResponse.setContentType(expectedContentType);
+						actualResponse.setContentType(actualContentType);
 						super.assertContentType(expectedContentType, actualContentType);
 					}
 
@@ -169,7 +164,7 @@ public class MainController {
 				RestTemplateBuilder.build(requireNonNull(config.target)));
 
 		try {
-			assertions.exec(request.getRequest());
+			assertions.assertAll(request.getRequest());
 			log.info("TEST {} OK", request);
 		}
 		catch(Throwable e) {

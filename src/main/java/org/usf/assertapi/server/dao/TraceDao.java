@@ -2,7 +2,7 @@ package org.usf.assertapi.server.dao;
 
 import java.util.List;
 
-import org.usf.assertapi.core.AssertionContext;
+import org.usf.assertapi.core.AssertionEnvironement;
 import org.usf.assertapi.core.AssertionResult;
 import org.usf.assertapi.server.model.AssertionResultServer;
 import org.usf.assertapi.server.model.ApiTraceGroup;
@@ -15,7 +15,7 @@ public interface TraceDao {
 
     void insert(long id, AssertionResult res);
 
-    long register(AssertionContext ctx, String app, String latestRelease, String stableRelease, TraceGroupStatus status);
+    long register(AssertionEnvironement ctx, String app, String latestRelease, String stableRelease, TraceGroupStatus status);
 
     List<ApiTraceGroup> selectTraceGroup(Long id);
 

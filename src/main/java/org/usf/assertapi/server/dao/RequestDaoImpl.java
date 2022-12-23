@@ -10,7 +10,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.CollectionUtils;
 import org.usf.assertapi.core.ApiRequest;
-import org.usf.assertapi.core.AssertionConfig;
+import org.usf.assertapi.core.ExecutionConfig;
 import org.usf.assertapi.server.model.ApiRequestGroupServer;
 import org.usf.assertapi.server.model.ApiRequestServer;
 
@@ -62,12 +62,9 @@ public class RequestDaoImpl implements RequestDao {
                 if(actualId != nextId) {
                     actualId = nextId;
                     try {
-                        var conf = new AssertionConfig(
-                                rs.getBoolean("VA_ASR_DBG"),
+                        var conf = new ExecutionConfig(
                                 rs.getBoolean("VA_ASR_ENB"),
-                                rs.getBoolean("VA_ASR_STR"),
-                                rs.getBoolean("VA_ASR_PRL"),
-                                mapper.readValue(rs.getString("VA_ASR_EXL"), String[].class)
+                                rs.getBoolean("VA_ASR_PRL")
                         );
                         var apiRequest = new ApiRequest(
                                 actualId,
@@ -76,8 +73,9 @@ public class RequestDaoImpl implements RequestDao {
                                 mapper.readValue(rs.getString("VA_API_HDR"), new TypeReference<Map<String, String>>(){}),
                                 rs.getString("VA_API_NME"),
                                 rs.getString("VA_API_DSC"),
-                                (short)200,
-                                conf
+                                (short)200, //TODO add column
+                                conf,
+                                null
                         );
                         var apiRequestGroup = new ApiRequestGroupServer(
                                 rs.getString("VA_API_APP"),
@@ -122,14 +120,14 @@ public class RequestDaoImpl implements RequestDao {
                 ps.setString(3, req.getMethod());
                 ps.setString(4, mapper.writeValueAsString(req.getHeaders()));
                 ps.setString(5, req.getBody());
-                ps.setString(6, "UTF8"); //TODO delete this
+                ps.setString(6, "UTF8"); //TODO remove this column
                 ps.setString(7, req.getName());
                 ps.setString(8, req.getDescription());
-                ps.setBoolean(9, req.getConfiguration().isParallel());
-                ps.setBoolean(10, req.getConfiguration().isStrict());
-                ps.setBoolean(11, req.getConfiguration().isEnable());
-                ps.setBoolean(12, req.getConfiguration().isDebug());
-                ps.setString(13, mapper.writeValueAsString(req.getConfiguration().getExcludePaths()));
+                ps.setBoolean(9, req.getExecConfig().isParallel());
+                ps.setBoolean(10, false);//TODO remove this column
+                ps.setBoolean(11, req.getExecConfig().isEnable());
+                ps.setBoolean(12, false); //TODO remove this column
+                ps.setString(13, mapper.writeValueAsString("[]"));  //TODO remove this column
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
@@ -171,7 +169,7 @@ public class RequestDaoImpl implements RequestDao {
     }
 
     @Override
-    public void insertRequestGroup(@NonNull long id, @NonNull List<ApiRequestGroupServer> requestGroupList) {
+    public void insertRequestGroup(long id, @NonNull List<ApiRequestGroupServer> requestGroupList) {
         var q = "INSERT INTO API_REQ_GRP(ID_REQ, VA_API_APP, VA_API_ENV)"
                 + " VALUES(?,?,?)";
         template.batchUpdate(q, requestGroupList, requestGroupList.size(), (ps, r) -> {
@@ -183,7 +181,7 @@ public class RequestDaoImpl implements RequestDao {
     }
 
     @Override
-    public void deleteRequestGroup(@NonNull long id){
+    public void deleteRequestGroup(long id){
         String q = "DELETE FROM API_REQ_GRP WHERE ID_REQ = ?";
         template.update(q, ps-> ps.setLong(1, id));
         log.info("");

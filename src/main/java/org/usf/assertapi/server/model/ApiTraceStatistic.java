@@ -1,8 +1,8 @@
 package org.usf.assertapi.server.model;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static org.usf.assertapi.core.TestStatus.ERROR;
 import static org.usf.assertapi.core.TestStatus.FAIL;
-import static org.usf.assertapi.core.TestStatus.KO;
 import static org.usf.assertapi.core.TestStatus.OK;
 
 import java.util.List;
@@ -30,7 +30,7 @@ public class ApiTraceStatistic {
     public void append(TestStatus ts){
         if (ts == OK) {
             nbTestOk++;
-        } else if (ts == KO || ts == FAIL) {
+        } else if (ts == FAIL || ts == ERROR) {
             nbTestKo++;
         }
     }
@@ -40,7 +40,7 @@ public class ApiTraceStatistic {
 	}
     
     public static final ApiTraceStatistic from(List<ApiRequest> reqList) {
-    	return new ApiTraceStatistic(reqList.size(), (int)reqList.stream().filter(l -> !l.getConfiguration().isEnable()).count());
+    	return new ApiTraceStatistic(reqList.size(), (int)reqList.stream().filter(l -> !l.getExecConfig().isEnable()).count());
     }
     
 	public static final ApiTraceStatistic NO_STAT = new ApiTraceStatistic(0, 0) {

@@ -1,27 +1,29 @@
 package org.usf.assertapi.server.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
-import org.usf.assertapi.core.AssertionResult;
-import org.usf.assertapi.server.model.AssertionResultServer;
-import org.usf.assertapi.server.model.ApiTraceGroup;
-import org.usf.assertapi.server.model.TraceGroupStatus;
-import org.usf.assertapi.server.service.SseService;
-import org.usf.assertapi.server.service.TraceService;
-
 import java.util.List;
 
-import static org.usf.assertapi.core.AssertionContext.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.usf.assertapi.core.AssertionResult;
+import org.usf.assertapi.server.model.ApiTraceGroup;
+import org.usf.assertapi.server.model.AssertionResultServer;
+import org.usf.assertapi.server.service.TraceService;
 
-@Slf4j
+import lombok.RequiredArgsConstructor;
+
 @CrossOrigin
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/v1/assert/api/trace")
 public class TraceController {
-    private final TraceService service;
+    
+	private final TraceService service;
 
     @GetMapping
     public List<AssertionResultServer> get(
@@ -31,8 +33,8 @@ public class TraceController {
         return service.getTraces(ids, status);
     }
 
-    @PutMapping("{" + CTX_ID + "}")
-    public void put(@PathVariable(CTX_ID) long id, @RequestBody AssertionResult result) {
+    @PutMapping("{id}")
+    public void put(@PathVariable("id") long id, @RequestBody AssertionResult result) {
         service.addTrace(id, result);
     }
 
