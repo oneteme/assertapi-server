@@ -134,45 +134,42 @@ public class MainController {
 			@RequestBody Configuration config
 	) {
 		var responseComparator = new ResponseComparator();
-		var expectedResponse = new ApiResponseServer();
-		var actualResponse = new ApiResponseServer();
+		responseComparator.setAct(new ApiResponseServer());
+		responseComparator.setExp(new ApiResponseServer());
 		var request = requestService.getRequestOne(id);
 		var assertions = new ApiDefaultAssertion(
-				new ResponseProxyComparator(new org.usf.assertapi.core.ResponseComparator(), t -> {responseComparator.setStatus(t.getStatus()); responseComparator.setStep(t.getStep());}){
+				new ResponseProxyComparator(new org.usf.assertapi.core.ResponseComparator(), t-> {}){
 					@Override
 					public void assertJsonContent(String expectedContent, String actualContent, JsonResponseCompareConfig strict) {
-						expectedResponse.setResponse(expectedContent);
-						actualResponse.setResponse(actualContent);
+						responseComparator.getExp().setResponse(expectedContent);
+						responseComparator.getAct().setResponse(actualContent);
 						super.assertJsonContent(expectedContent, actualContent, strict);
 					}
 
 					@Override
 					public void assertContentType(String expectedContentType, String actualContentType) {
-						expectedResponse.setContentType(expectedContentType);
-						actualResponse.setContentType(actualContentType);
+						responseComparator.getExp().setContentType(expectedContentType);
+						responseComparator.getAct().setContentType(actualContentType);
 						super.assertContentType(expectedContentType, actualContentType);
 					}
 
 					@Override
 					public void assertStatusCode(int expectedStatusCode, int actualStatusCode) {
-						expectedResponse.setStatusCode(expectedStatusCode);
-						actualResponse.setStatusCode(actualStatusCode);
+						responseComparator.getExp().setStatusCode(expectedStatusCode);
+						responseComparator.getAct().setStatusCode(actualStatusCode);
 						super.assertStatusCode(expectedStatusCode, actualStatusCode);
+					}
+					
+					@Override
+					protected void trace(TestStatus status, TestStep step) {
+						responseComparator.setStatus(status); 
+						responseComparator.setStep(step);
 					}
 				},
 				RestTemplateBuilder.build(requireNonNull(config.refer)),
 				RestTemplateBuilder.build(requireNonNull(config.target)));
 
-		try {
-			assertions.assertAll(request.getRequest());
-			log.info("TEST {} OK", request);
-		}
-		catch(Throwable e) {
-			//fail
-			log.error("assertion fail", e);
-		}
-		responseComparator.setAct(actualResponse);
-		responseComparator.setExp(expectedResponse);
+		assertions.assertAll(request.getRequest());
 		return responseComparator;
 	}
 
