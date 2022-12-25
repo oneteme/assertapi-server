@@ -16,7 +16,7 @@ public interface TraceService {
 
     void addTrace(long idAsr, Long idReq, @NonNull ApiCompareResult res);
 
-    long register(RuntimeEnvironement ctx, String app, String latestRelease, String stableRelease);
+    long register(String app, String latestRelease, String stableRelease, RuntimeEnvironement env);
 
     void updateStatus(long id, TraceGroupStatus status);
 

@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.usf.assertapi.core.ApiNonRegressionCheck;
-import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.server.model.ApiRequestServer;
 import org.usf.assertapi.server.service.RequestService;
 
@@ -38,12 +37,12 @@ public class RequestController {
         return getAll(ids, app, envs).stream().map(ApiRequestServer::getRequest).collect(toList());
     }
 
-    @PutMapping
+    @PutMapping //TODO put env + app in path no => delete  ApiRequestServer
     public long put(@RequestBody ApiRequestServer query) {
         return service.addRequest(query);
     }
 
-    @PostMapping
+    @PostMapping //TODO put env + app in path no => delete  ApiRequestServer & no need to couple 
     public void update(@RequestBody ApiRequestServer query) {
         service.updateRequest(query);
     }
@@ -53,7 +52,8 @@ public class RequestController {
         service.removeRequest(ids);
     }
 
-    @GetMapping("all")
+    @Deprecated(forRemoval = true)
+    @GetMapping("all")  //TODO env & app not important in response ???
     public List<ApiRequestServer> getAll(
             @RequestParam(name="id", required = false) int[] ids,
             @RequestParam(name="app", required = false) String app,

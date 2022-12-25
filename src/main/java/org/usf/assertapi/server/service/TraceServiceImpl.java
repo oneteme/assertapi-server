@@ -32,8 +32,8 @@ public class TraceServiceImpl implements TraceService {
     }
 
     @Override
-    public long register(RuntimeEnvironement ctx, String app, String latestRelease, String stableRelease) {
-        return dao.register(ctx, app, latestRelease, stableRelease, PENDING);
+    public long register(String app, String latestRelease, String stableRelease, RuntimeEnvironement env) {
+        return dao.register(env, app, latestRelease, stableRelease, PENDING);
     }
 
     @Override

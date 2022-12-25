@@ -79,8 +79,8 @@ public class MainController {
 			@RequestParam(name="app") String app,
 			@RequestParam(name="stable_release") String stableRelease) {
 		
-		var ctx = RuntimeEnvironement.from(headers::get);
-		var id = traceService.register(ctx, app, ctx.getAddress(), stableRelease); //latest <= dev machine
+		var env = RuntimeEnvironement.from(headers::get);
+		var id = traceService.register(app, env.getAddress(), stableRelease, env); //latest <= dev machine
 		var list = requestController.get(null, app, singletonList(stableRelease));
 		sseService.start(id, from(list));
 		HttpHeaders hdr = new HttpHeaders();
@@ -97,7 +97,7 @@ public class MainController {
 			@RequestParam(name="excluded", required = false) boolean excluded,
 			@RequestBody Configuration config) {
 		
-		var id = traceService.register(build().withUser("front_user"), app, latestRelease, stableRelease);
+		var id = traceService.register(app, latestRelease, stableRelease, build().withUser("front_user"));
 		sseService.init(id);
 		
 		new ApiAssertionFactory()
@@ -115,7 +115,7 @@ public class MainController {
 		return id;
 	}
 	
-	@Deprecated // TODO à refaire
+	@Deprecated // TODO  filter in db
 	private List<ApiNonRegressionCheck> requests(String app, String latestRelease, String stableRelease, int[] ids, boolean excluded) {
 
 		List<String> envs = asList(latestRelease, stableRelease);
@@ -141,13 +141,6 @@ public class MainController {
 		var assertions = new ApiDefaultAssertion(
 				new ResponseComparatorProxy(new org.usf.assertapi.core.ResponseComparator(), null){
 					@Override
-					public void assertJsonContent(String expectedContent, String actualContent, JsonResponseCompareConfig strict) {
-						responseComparator.getExp().setResponse(expectedContent);
-						responseComparator.getAct().setResponse(actualContent);
-						super.assertJsonContent(expectedContent, actualContent, strict);
-					}
-
-					@Override
 					public void assertContentType(String expectedContentType, String actualContentType) {
 						responseComparator.getExp().setContentType(expectedContentType);
 						responseComparator.getAct().setContentType(actualContentType);
@@ -161,6 +154,13 @@ public class MainController {
 						super.assertStatusCode(expectedStatusCode, actualStatusCode);
 					}
 					
+					@Override
+					public void assertJsonContent(String expectedContent, String actualContent, JsonResponseCompareConfig strict) {
+						responseComparator.getExp().setResponse(expectedContent);
+						responseComparator.getAct().setResponse(actualContent);
+						super.assertJsonContent(expectedContent, actualContent, strict);
+					}
+
 					@Override
 					protected void trace(CompareStatus status, CompareStage step) {
 						responseComparator.setStatus(status); 

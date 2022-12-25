@@ -20,16 +20,15 @@ import lombok.RequiredArgsConstructor;
 @CrossOrigin
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/v1/assert/api/trace") //TODO /v1/assert/api/trace
+@RequestMapping("/v1/assert/api/trace")
 public class TraceController {
     
 	private final TraceService service;
 
     @GetMapping
-    public List<AssertionResultServer> get(
+    public List<AssertionResultServer> get( //TODO maybe create one class that merge fields ?
             @RequestParam(name="id", required = false) long[] ids,
-            @RequestParam(name = "status", required = false) List<String> status
-    ) {
+            @RequestParam(name = "status", required = false) List<String> status) {
         return service.getTraces(ids, status);
     }
 
@@ -39,9 +38,7 @@ public class TraceController {
     }
 
     @GetMapping("group")
-    public List<ApiTraceGroup> get(
-            @RequestParam(name="id", required = false) Long id
-    ) {
+    public List<ApiTraceGroup> get(@RequestParam(name="id", required = false) Long id) {
         return service.getTraceGroups(id);
     }
 }
