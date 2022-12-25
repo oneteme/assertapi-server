@@ -11,11 +11,12 @@ import org.usf.assertapi.server.model.TraceGroupStatus;
 import lombok.NonNull;
 
 public interface TraceDao {
+	
     List<AssertionResultServer> select(long[] ids, List<String> status);
 
     void insert(long idAsr, Long idReq, @NonNull ApiCompareResult res);
 
-    long register(RuntimeEnvironement ctx, String app, String latestRelease, String stableRelease, TraceGroupStatus status);
+    long register(String app, String stableRelease, String latestRelease, RuntimeEnvironement ctx, TraceGroupStatus status);
 
     List<ApiTraceGroup> selectTraceGroup(Long id);
 

@@ -35,7 +35,7 @@ public class RequestServiceImpl implements RequestService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public long addRequest(ApiRequestServer req) {
-        long nextId = dao.nextId("ID_REQ", "API_REQ");
+        long nextId = dao.nextId("ID_REQ", "API_REQ"); //TODO db column in service
         dao.insertRequest(nextId, req.getRequest());
         dao.insertRequestGroup(nextId, req.getRequestGroupList());
         return nextId;

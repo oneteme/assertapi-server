@@ -1,10 +1,8 @@
 package org.usf.assertapi.server.service;
 
-import lombok.NonNull;
-import org.springframework.transaction.annotation.Transactional;
-import org.usf.assertapi.server.model.ApiServerConfig;
-
 import java.util.List;
+
+import org.usf.assertapi.server.model.ApiServerConfig;
 
 public interface EnvironmentService {
     List<ApiServerConfig> getEnvironments();

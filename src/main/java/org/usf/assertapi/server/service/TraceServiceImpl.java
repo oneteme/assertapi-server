@@ -32,12 +32,12 @@ public class TraceServiceImpl implements TraceService {
     }
 
     @Override
-    public long register(String app, String latestRelease, String stableRelease, RuntimeEnvironement env) {
-        return dao.register(env, app, latestRelease, stableRelease, PENDING);
+    public long register(String app, String stableRelease, String latestRelease, RuntimeEnvironement env) {
+        return dao.register(app, stableRelease, latestRelease, env, PENDING);
     }
 
     @Override
-    public void updateStatus(long id, TraceGroupStatus status){
+    public void updateStatus(long id, TraceGroupStatus status){ //TODO update must return new Object
         dao.updateStatus(id, status);
     }
 

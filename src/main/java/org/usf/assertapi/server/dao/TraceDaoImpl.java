@@ -115,7 +115,7 @@ public class TraceDaoImpl implements TraceDao {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public long register(@NonNull RuntimeEnvironement ctx, String app, String latestRelease, String stableRelease, TraceGroupStatus status) {
+    public long register(String app, String stableRelease, String latestRelease, @NonNull RuntimeEnvironement ctx, TraceGroupStatus status) {
 
         var id = currentTimeMillis();
         var q = "INSERT INTO ASR_GRP(ID_ASR, VA_HST_USR, VA_HST_OS, VA_HST_ADR, VA_API_APP, VA_EXT_ENV, VA_ACT_ENV, VA_GRP_STT) VALUES(?,?,?,?,?,?,?,?)";

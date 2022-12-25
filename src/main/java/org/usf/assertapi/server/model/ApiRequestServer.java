@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 import org.usf.assertapi.core.ApiNonRegressionCheck;
-import org.usf.assertapi.core.ApiRequest;
 
 import java.util.List;
 

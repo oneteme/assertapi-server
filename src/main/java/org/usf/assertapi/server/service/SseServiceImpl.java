@@ -58,6 +58,9 @@ public final class SseServiceImpl implements SseService {
             	sse.complete();
             }
         }
+        else {
+        	log.warn("can't find sseEmetter for id " + id);
+        }
     }
     
     private SseEmitter newSseEmitter(long id) {
