@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.usf.assertapi.core.ApiNonRegressionCheck;
 import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.server.model.ApiRequestServer;
 import org.usf.assertapi.server.service.RequestService;
@@ -30,7 +31,7 @@ public class RequestController {
 	private final RequestService service;
 
     @GetMapping
-    public List<ApiRequest> get(
+    public List<ApiNonRegressionCheck> get(
             @RequestParam(name="id", required = false) int[] ids,
             @RequestParam(name="app", required = false) String app,
             @RequestParam(name="env", required = false) List<String> envs) {

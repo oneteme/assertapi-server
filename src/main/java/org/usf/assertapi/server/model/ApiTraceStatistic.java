@@ -1,14 +1,15 @@
 package org.usf.assertapi.server.model;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
-import static org.usf.assertapi.core.TestStatus.ERROR;
-import static org.usf.assertapi.core.TestStatus.FAIL;
-import static org.usf.assertapi.core.TestStatus.OK;
+import static org.usf.assertapi.core.CompareStatus.ERROR;
+import static org.usf.assertapi.core.CompareStatus.FAIL;
+import static org.usf.assertapi.core.CompareStatus.OK;
 
 import java.util.List;
 
+import org.usf.assertapi.core.ApiNonRegressionCheck;
 import org.usf.assertapi.core.ApiRequest;
-import org.usf.assertapi.core.TestStatus;
+import org.usf.assertapi.core.CompareStatus;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -27,7 +28,7 @@ public class ApiTraceStatistic {
     private int nbTestOk;
     private int nbTestKo;
 
-    public void append(TestStatus ts){
+    public void append(CompareStatus ts){
         if (ts == OK) {
             nbTestOk++;
         } else if (ts == FAIL || ts == ERROR) {
@@ -39,13 +40,13 @@ public class ApiTraceStatistic {
     	return nbTest == nbTestSkip + nbTestOk + nbTestKo;
 	}
     
-    public static final ApiTraceStatistic from(List<ApiRequest> reqList) {
+    public static final ApiTraceStatistic from(List<ApiNonRegressionCheck> reqList) {
     	return new ApiTraceStatistic(reqList.size(), (int)reqList.stream().filter(l -> !l.getExecConfig().isEnable()).count());
     }
     
 	public static final ApiTraceStatistic NO_STAT = new ApiTraceStatistic(0, 0) {
 		@Override
-		public void append(TestStatus ts) {
+		public void append(CompareStatus ts) {
 			throw new UnsupportedOperationException();
 		}
 		

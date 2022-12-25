@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.CollectionUtils;
+import org.usf.assertapi.core.ApiNonRegressionCheck;
 import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.core.ExecutionConfig;
 import org.usf.assertapi.server.model.ApiRequestGroupServer;
@@ -66,15 +67,16 @@ public class RequestDaoImpl implements RequestDao {
                                 rs.getBoolean("VA_ASR_ENB"),
                                 rs.getBoolean("VA_ASR_PRL")
                         );
-                        var apiRequest = new ApiRequest(
+                        var apiRequest = new ApiNonRegressionCheck(
                                 actualId,
+                                rs.getString("VA_API_NME"),
+                                0, //TODO add version column
                                 rs.getString("VA_API_URI"),
                                 rs.getString("VA_API_MTH"),
                                 mapper.readValue(rs.getString("VA_API_HDR"), new TypeReference<Map<String, String>>(){}),
-                                rs.getString("VA_API_NME"),
-                                rs.getString("VA_API_DSC"),
-                                (short)200, //TODO add column
+                                null, //TODO add acceptableStatus column
                                 conf,
+                                rs.getString("VA_API_DSC"),
                                 null
                         );
                         var apiRequestGroup = new ApiRequestGroupServer(
@@ -107,7 +109,7 @@ public class RequestDaoImpl implements RequestDao {
     }
 
     @Override
-    public void insertRequest(long id, @NonNull ApiRequest req) {
+    public void insertRequest(long id, @NonNull ApiNonRegressionCheck req) {
 
         var q = "INSERT INTO API_REQ(ID_REQ, VA_API_URI, VA_API_MTH, VA_API_HDR, VA_API_BDY, VA_API_CHR, "
                 + "VA_API_NME, VA_API_DSC, "
@@ -128,6 +130,7 @@ public class RequestDaoImpl implements RequestDao {
                 ps.setBoolean(11, req.getExecConfig().isEnable());
                 ps.setBoolean(12, false); //TODO remove this column
                 ps.setString(13, mapper.writeValueAsString("[]"));  //TODO remove this column
+                //TODO add respConfig json column 
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
@@ -136,7 +139,7 @@ public class RequestDaoImpl implements RequestDao {
     }
 
     @Override
-    public void updateRequest(@NonNull ApiRequest req) {
+    public void updateRequest(@NonNull ApiNonRegressionCheck req) {
 
         var q = "UPDATE API_REQ SET VA_API_URI = ?, VA_API_MTH = ?, VA_API_BDY = ?, " +
                 "VA_API_NME = ?, VA_API_DSC = ?, VA_API_HDR = ? " +

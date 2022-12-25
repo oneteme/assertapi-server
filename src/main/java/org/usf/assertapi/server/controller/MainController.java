@@ -6,8 +6,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.of;
 import static org.springframework.http.ResponseEntity.ok;
-import static org.usf.assertapi.core.AssertionEnvironement.buildContext;
-import static org.usf.assertapi.core.AssertionEnvironement.from;
+import static org.usf.assertapi.core.RuntimeEnvironement.build;
 import static org.usf.assertapi.server.model.ApiTraceStatistic.from;
 
 import java.util.List;
@@ -27,13 +26,15 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.usf.assertapi.core.ApiAssertionFactory;
 import org.usf.assertapi.core.ApiDefaultAssertion;
+import org.usf.assertapi.core.ApiNonRegressionCheck;
 import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.core.JsonResponseCompareConfig;
-import org.usf.assertapi.core.ResponseProxyComparator;
+import org.usf.assertapi.core.ResponseComparatorProxy;
 import org.usf.assertapi.core.RestTemplateBuilder;
+import org.usf.assertapi.core.RuntimeEnvironement;
 import org.usf.assertapi.core.ServerConfig;
-import org.usf.assertapi.core.TestStatus;
-import org.usf.assertapi.core.TestStep;
+import org.usf.assertapi.core.CompareStatus;
+import org.usf.assertapi.core.CompareStage;
 import org.usf.assertapi.server.model.ApiRequestGroupServer;
 import org.usf.assertapi.server.model.ApiRequestServer;
 import org.usf.assertapi.server.model.ApiResponseServer;
@@ -73,12 +74,12 @@ public class MainController {
 	}
 
 	@GetMapping("load")
-	public ResponseEntity<List<ApiRequest>> load(
+	public ResponseEntity<List<ApiNonRegressionCheck>> load(
 			@RequestHeader Map<String, String> headers,
 			@RequestParam(name="app") String app,
 			@RequestParam(name="stable_release") String stableRelease) {
 		
-		var ctx = from(headers::get);
+		var ctx = RuntimeEnvironement.from(headers::get);
 		var id = traceService.register(ctx, app, ctx.getAddress(), stableRelease); //latest <= dev machine
 		var list = requestController.get(null, app, singletonList(stableRelease));
 		sseService.start(id, from(list));
@@ -96,14 +97,14 @@ public class MainController {
 			@RequestParam(name="excluded", required = false) boolean excluded,
 			@RequestBody Configuration config) {
 		
-		var id = traceService.register(buildContext().withUser("front_user"), app, latestRelease, stableRelease);
+		var id = traceService.register(build().withUser("front_user"), app, latestRelease, stableRelease);
 		sseService.init(id);
 		
 		new ApiAssertionFactory()
 		.comparing(config.getRefer(), config.getTarget())
-		.trace(a-> {
-			traceService.addTrace(id, a);
-			sseService.update(id, a);
+		.trace((r, e)-> {
+			traceService.addTrace(id, r.getId(), e);
+			sseService.update(id, e);
 		})
 		.build()
 		.assertAllAsync(()->{
@@ -115,7 +116,7 @@ public class MainController {
 	}
 	
 	@Deprecated // TODO à refaire
-	private List<ApiRequest> requests(String app, String latestRelease, String stableRelease, int[] ids, boolean excluded) {
+	private List<ApiNonRegressionCheck> requests(String app, String latestRelease, String stableRelease, int[] ids, boolean excluded) {
 
 		List<String> envs = asList(latestRelease, stableRelease);
 		var list = requestController.getAll(!excluded ? ids : null, app, envs).stream()
@@ -131,14 +132,14 @@ public class MainController {
 	@PostMapping("run/{id}")
 	public ResponseComparator run(
 			@PathVariable("id") int id,
-			@RequestBody Configuration config
-	) {
+			@RequestBody Configuration config) {
+		
 		var responseComparator = new ResponseComparator();
 		responseComparator.setAct(new ApiResponseServer());
 		responseComparator.setExp(new ApiResponseServer());
 		var request = requestService.getRequestOne(id);
 		var assertions = new ApiDefaultAssertion(
-				new ResponseProxyComparator(new org.usf.assertapi.core.ResponseComparator(), t-> {}){
+				new ResponseComparatorProxy(new org.usf.assertapi.core.ResponseComparator(), null){
 					@Override
 					public void assertJsonContent(String expectedContent, String actualContent, JsonResponseCompareConfig strict) {
 						responseComparator.getExp().setResponse(expectedContent);
@@ -161,7 +162,7 @@ public class MainController {
 					}
 					
 					@Override
-					protected void trace(TestStatus status, TestStep step) {
+					protected void trace(CompareStatus status, CompareStage step) {
 						responseComparator.setStatus(status); 
 						responseComparator.setStep(step);
 					}
@@ -187,7 +188,7 @@ public class MainController {
 	public static final class ResponseComparator {
 		private ApiResponseServer exp;
 		private ApiResponseServer act;
-		private TestStatus status;
-		private TestStep step;
+		private CompareStatus status;
+		private CompareStage step;
 	}
 }

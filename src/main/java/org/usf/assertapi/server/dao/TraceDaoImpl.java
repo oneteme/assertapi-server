@@ -48,30 +48,33 @@ public class TraceDaoImpl implements TraceDao {
 //                    rs.getString("VA_EXT_HST"),
                     rs.getDate("DH_EXT_STR").getTime(),
                     rs.getDate("DH_EXT_END").getTime(),
-                    0 //TODO add column size
+                    0, //TODO add column size
+                    0 //TODO add column status
             );
             var actConf = new ExecutionInfo(
 //                    rs.getString("VA_ACT_HST"),
                     rs.getDate("DH_ACT_STR").getTime(),
                     rs.getDate("DH_ACT_END").getTime(),
-                    0 //TODO add column size
+                    0, //TODO add column size
+                    0 //TODO add column status
             );
-            var res = new AssertionResult(
-                    rs.getLong("ID_ASR"),
+            var res = new ApiCompareResult(
+//                    rs.getLong("ID_ASR"),
                     expConf,
                     actConf,
-                    rs.getString("VA_REQ_STT") != null ? TestStatus.valueOf(rs.getString("VA_REQ_STT")) : null,
-                    rs.getString("VA_REQ_STP") != null ? TestStep.valueOf(rs.getString("VA_REQ_STP")) : null
+                    rs.getString("VA_REQ_STT") != null ? CompareStatus.valueOf(rs.getString("VA_REQ_STT")) : null,
+                    rs.getString("VA_REQ_STP") != null ? CompareStage.valueOf(rs.getString("VA_REQ_STP")) : null
             );
-            var req = new ApiRequest(
+            var req = new ApiNonRegressionCheck(
                     rs.getLong("ID_REQ"),
+                    rs.getString("VA_API_NME"),
+                    0, //TODO add column version
                     rs.getString("VA_API_URI"),
                     rs.getString("VA_API_MTH"),
                     null,
-                    rs.getString("VA_API_NME"),
-                    rs.getString("VA_API_DSC"),
-                    (short)200,
+                    null,
                     null,//TODO
+                    rs.getString("VA_API_DSC"),
                     null //TODO
             );
             return new AssertionResultServer(
@@ -85,34 +88,34 @@ public class TraceDaoImpl implements TraceDao {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void insert(long id, @NonNull AssertionResult res) {
+    public void insert(long idAsr, Long idReq, @NonNull ApiCompareResult res) {
         var q = "INSERT INTO ASR_REQ(ID_ASR, ID_REQ, VA_EXT_HST, VA_ACT_HST,"
                 + " DH_EXT_STR, DH_EXT_END, DH_ACT_STR, DH_ACT_END,"
                 + " VA_REQ_STT, VA_REQ_STP)"
                 + " VALUES(?,?,?,?,?,?,?,?,?,?)";
         template.update(q, ps-> {
-            ps.setLong(1, id);
-            if(res.getId() == null) {
+            ps.setLong(1, idAsr);
+            if(idReq == null) {
                 ps.setNull(2, BIGINT);
             }
             else {
-                ps.setLong(2, res.getId());
+                ps.setLong(2, idReq);
             }
 //            ps.setString(3, res.getExpExecution().getHost());
 //            ps.setString(4, res.getActExecution().getHost());
-            ps.setTimestamp(5, ofEpochMilli(res.getExpExecution().getStart()));
-            ps.setTimestamp(6, ofEpochMilli(res.getExpExecution().getEnd()));
-            ps.setTimestamp(7, ofEpochMilli(res.getActExecution().getStart()));
-            ps.setTimestamp(8, ofEpochMilli(res.getActExecution().getEnd()));
+            ps.setTimestamp(5, ofEpochMilli(res.getStableApiExecution().getStart()));
+            ps.setTimestamp(6, ofEpochMilli(res.getStableApiExecution().getEnd()));
+            ps.setTimestamp(7, ofEpochMilli(res.getLatestApiExecution().getStart()));
+            ps.setTimestamp(8, ofEpochMilli(res.getLatestApiExecution().getEnd()));
             ps.setString(9, res.getStatus().toString());
             ps.setString(10, res.getStep() == null ? null : res.getStep().toString());
         });
-        log.info("assersion {} ==> {}", id, res);
+        log.info("assersion {} ==> {}", idAsr, res);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public long register(@NonNull AssertionEnvironement ctx, String app, String latestRelease, String stableRelease, TraceGroupStatus status) {
+    public long register(@NonNull RuntimeEnvironement ctx, String app, String latestRelease, String stableRelease, TraceGroupStatus status) {
 
         var id = currentTimeMillis();
         var q = "INSERT INTO ASR_GRP(ID_ASR, VA_HST_USR, VA_HST_OS, VA_HST_ADR, VA_API_APP, VA_EXT_ENV, VA_ACT_ENV, VA_GRP_STT) VALUES(?,?,?,?,?,?,?,?)";
@@ -160,7 +163,7 @@ public class TraceDaoImpl implements TraceDao {
     }
 
     @Override
-    public void updateStatus(@NonNull long id, TraceGroupStatus status){
+    public void updateStatus(long id, TraceGroupStatus status){
         String q = "UPDATE ASR_GRP SET VA_GRP_STT = ? WHERE ID_ASR = ? ";
         template.update(q, ps-> {
             ps.setString(1, status.name());
