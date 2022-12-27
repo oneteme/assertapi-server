@@ -26,9 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.usf.assertapi.core.ApiAssertionFactory;
 import org.usf.assertapi.core.ApiDefaultAssertion;
-import org.usf.assertapi.core.ApiNonRegressionCheck;
 import org.usf.assertapi.core.ApiRequest;
-import org.usf.assertapi.core.JsonResponseCompareConfig;
+import org.usf.assertapi.core.HttpRequest;
+import org.usf.assertapi.core.JsonResponseComparisonConfig;
 import org.usf.assertapi.core.ResponseComparatorProxy;
 import org.usf.assertapi.core.RestTemplateBuilder;
 import org.usf.assertapi.core.RuntimeEnvironement;
@@ -74,7 +74,7 @@ public class MainController {
 	}
 
 	@GetMapping("load")
-	public ResponseEntity<List<ApiNonRegressionCheck>> load(
+	public ResponseEntity<List<ApiRequest>> load(
 			@RequestHeader Map<String, String> headers,
 			@RequestParam(name="app") String app,
 			@RequestParam(name="stable_release") String stableRelease) {
@@ -116,7 +116,7 @@ public class MainController {
 	}
 	
 	@Deprecated // TODO  filter in db
-	private List<ApiNonRegressionCheck> requests(String app, String latestRelease, String stableRelease, int[] ids, boolean excluded) {
+	private List<ApiRequest> requests(String app, String latestRelease, String stableRelease, int[] ids, boolean excluded) {
 
 		List<String> envs = asList(latestRelease, stableRelease);
 		var list = requestController.getAll(!excluded ? ids : null, app, envs).stream()
@@ -124,7 +124,7 @@ public class MainController {
 				.map(ApiRequestServer::getRequest)
 				.collect(toList());
 		if(excluded && ids != null) { //TODO else ? 
-			of(ids).forEach(i-> list.stream().filter(t-> t.getId() == i).findAny().ifPresent(t-> t.getExecConfig().disable()));
+			of(ids).forEach(i-> list.stream().filter(t-> t.getId() == i).findAny().ifPresent(t-> t.getExecutionConfig().disable()));
 		}
 		return list;
 	}
@@ -155,7 +155,7 @@ public class MainController {
 					}
 					
 					@Override
-					public void assertJsonContent(String expectedContent, String actualContent, JsonResponseCompareConfig strict) {
+					public void assertJsonContent(String expectedContent, String actualContent, JsonResponseComparisonConfig strict) {
 						responseComparator.getExp().setResponse(expectedContent);
 						responseComparator.getAct().setResponse(actualContent);
 						super.assertJsonContent(expectedContent, actualContent, strict);

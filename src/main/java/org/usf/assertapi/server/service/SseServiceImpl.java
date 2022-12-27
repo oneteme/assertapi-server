@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import org.usf.assertapi.core.ApiCompareResult;
+import org.usf.assertapi.core.ComparisonResult;
 import org.usf.assertapi.server.model.ApiTraceStatistic;
 import org.usf.assertapi.server.model.TraceGroupStatus;
 
@@ -47,7 +47,7 @@ public final class SseServiceImpl implements SseService {
     }
 
     @Override
-    public void update(long id, @NonNull ApiCompareResult result) {
+    public void update(long id, @NonNull ComparisonResult result) {
         var entry = sseEmitters.get(id);
         if(entry != null) {
             var stat = entry.getKey();

@@ -1,7 +1,7 @@
 package org.usf.assertapi.server.service;
 
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import org.usf.assertapi.core.ApiCompareResult;
+import org.usf.assertapi.core.ComparisonResult;
 import org.usf.assertapi.server.model.ApiTraceStatistic;
 
 public interface SseService {
@@ -12,7 +12,7 @@ public interface SseService {
 	
 	void start(long id, ApiTraceStatistic apiTraceGroup);
 
-    void update(long id, ApiCompareResult result);
+    void update(long id, ComparisonResult result);
 
 
 }

@@ -2,8 +2,8 @@ package org.usf.assertapi.server.model;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
-import org.usf.assertapi.core.ApiCompareResult;
-import org.usf.assertapi.core.ApiRequest;
+import org.usf.assertapi.core.ComparisonResult;
+import org.usf.assertapi.core.HttpRequest;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -15,6 +15,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AssertionResultServer {
 	
-    private final ApiCompareResult result;
-    private final ApiRequest request;
+    private final ComparisonResult result;
+    private final HttpRequest request;
 }

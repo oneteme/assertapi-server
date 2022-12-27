@@ -58,24 +58,25 @@ public class TraceDaoImpl implements TraceDao {
                     0, //TODO add column size
                     0 //TODO add column status
             );
-            var res = new ApiCompareResult(
+            var res = new ComparisonResult(
 //                    rs.getLong("ID_ASR"),
                     expConf,
                     actConf,
                     rs.getString("VA_REQ_STT") != null ? CompareStatus.valueOf(rs.getString("VA_REQ_STT")) : null,
                     rs.getString("VA_REQ_STP") != null ? CompareStage.valueOf(rs.getString("VA_REQ_STP")) : null
             );
-            var req = new ApiNonRegressionCheck(
+            var req = new ApiRequest(
                     rs.getLong("ID_REQ"),
                     rs.getString("VA_API_NME"),
                     0, //TODO add column version
+                    rs.getString("VA_API_DSC"),
                     rs.getString("VA_API_URI"),
                     rs.getString("VA_API_MTH"),
                     null,
                     null,
                     null,//TODO
-                    rs.getString("VA_API_DSC"),
-                    null //TODO
+                    null,// response config => json column
+                    null // stable reference
             );
             return new AssertionResultServer(
                     res,
@@ -88,7 +89,7 @@ public class TraceDaoImpl implements TraceDao {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void insert(long idAsr, Long idReq, @NonNull ApiCompareResult res) {
+    public void insert(long idAsr, Long idReq, @NonNull ComparisonResult res) {
         var q = "INSERT INTO ASR_REQ(ID_ASR, ID_REQ, VA_EXT_HST, VA_ACT_HST,"
                 + " DH_EXT_STR, DH_EXT_END, DH_ACT_STR, DH_ACT_END,"
                 + " VA_REQ_STT, VA_REQ_STP)"

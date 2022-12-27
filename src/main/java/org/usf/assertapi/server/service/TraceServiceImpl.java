@@ -6,7 +6,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.usf.assertapi.core.RuntimeEnvironement;
-import org.usf.assertapi.core.ApiCompareResult;
+import org.usf.assertapi.core.ComparisonResult;
 import org.usf.assertapi.server.dao.TraceDao;
 import org.usf.assertapi.server.model.AssertionResultServer;
 import org.usf.assertapi.server.model.ApiTraceGroup;
@@ -27,7 +27,7 @@ public class TraceServiceImpl implements TraceService {
     }
 
     @Override
-    public void addTrace(long idAsr, Long idReq, @NonNull ApiCompareResult res) {
+    public void addTrace(long idAsr, Long idReq, @NonNull ComparisonResult res) {
         dao.insert(idAsr, idReq, res);
     }
 

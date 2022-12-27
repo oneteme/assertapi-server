@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.usf.assertapi.core.ApiCompareResult;
+import org.usf.assertapi.core.ComparisonResult;
 import org.usf.assertapi.server.model.ApiTraceGroup;
 import org.usf.assertapi.server.model.AssertionResultServer;
 import org.usf.assertapi.server.service.TraceService;
@@ -33,7 +33,7 @@ public class TraceController {
     }
 
     @PutMapping("{id}") //TODO /v1/nonregression/{asrID}/api/{reqID}/trace ?
-    public void put(@PathVariable("id") long id, @RequestBody ApiCompareResult result) {
+    public void put(@PathVariable("id") long id, @RequestBody ComparisonResult result) {
         service.addTrace(id, 0L, result);
     }
 

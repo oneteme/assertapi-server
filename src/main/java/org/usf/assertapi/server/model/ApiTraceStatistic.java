@@ -7,8 +7,8 @@ import static org.usf.assertapi.core.CompareStatus.OK;
 
 import java.util.List;
 
-import org.usf.assertapi.core.ApiNonRegressionCheck;
 import org.usf.assertapi.core.ApiRequest;
+import org.usf.assertapi.core.HttpRequest;
 import org.usf.assertapi.core.CompareStatus;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -40,8 +40,8 @@ public class ApiTraceStatistic {
     	return nbTest == nbTestSkip + nbTestOk + nbTestKo;
 	}
     
-    public static final ApiTraceStatistic from(List<ApiNonRegressionCheck> reqList) {
-    	return new ApiTraceStatistic(reqList.size(), (int)reqList.stream().filter(l -> !l.getExecConfig().isEnable()).count());
+    public static final ApiTraceStatistic from(List<ApiRequest> reqList) {
+    	return new ApiTraceStatistic(reqList.size(), (int)reqList.stream().filter(l -> !l.getExecutionConfig().isEnabled()).count());
     }
     
 	public static final ApiTraceStatistic NO_STAT = new ApiTraceStatistic(0, 0) {
