@@ -170,7 +170,7 @@ public class MainController {
 				RestTemplateBuilder.build(requireNonNull(config.refer)),
 				RestTemplateBuilder.build(requireNonNull(config.target)));
 
-		assertions.assertAll(request.getRequest());
+		assertions.assertApi(request.getRequest());
 		return responseComparator;
 	}
 
