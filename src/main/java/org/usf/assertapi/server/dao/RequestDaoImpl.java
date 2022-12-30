@@ -75,7 +75,8 @@ public class RequestDaoImpl implements RequestDao {
                                 rs.getString("VA_API_URI"),
                                 rs.getString("VA_API_MTH"),
                                 mapper.readValue(rs.getString("VA_API_HDR"), new TypeReference<Map<String, String>>(){}),
-                                null, //TODO add acceptableStatus column
+                                rs.getString("VA_API_BDY"), 
+                                null,//TODO add acceptableStatus column
                                 conf,
                                 null,// response config => json column
                                 null // stable reference
@@ -93,7 +94,6 @@ public class RequestDaoImpl implements RequestDao {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-                    request.getRequest().setBody(rs.getString("VA_API_BDY"));
                     requestList.add(request);
                 } else {
                     var apiRequestGroup = new ApiRequestGroupServer(

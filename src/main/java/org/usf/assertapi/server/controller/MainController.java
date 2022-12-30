@@ -28,11 +28,12 @@ import org.usf.assertapi.core.ApiAssertionFactory;
 import org.usf.assertapi.core.ApiDefaultAssertion;
 import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.core.HttpRequest;
-import org.usf.assertapi.core.JsonResponseComparisonConfig;
+import org.usf.assertapi.core.JsonComparatorConfig;
 import org.usf.assertapi.core.ResponseComparatorProxy;
 import org.usf.assertapi.core.RestTemplateBuilder;
 import org.usf.assertapi.core.RuntimeEnvironement;
 import org.usf.assertapi.core.ServerConfig;
+import org.usf.assertapi.core.TypeComparatorConfig;
 import org.usf.assertapi.core.CompareStatus;
 import org.usf.assertapi.core.CompareStage;
 import org.usf.assertapi.server.model.ApiRequestGroupServer;
@@ -155,7 +156,7 @@ public class MainController {
 					}
 					
 					@Override
-					public void assertJsonContent(String expectedContent, String actualContent, JsonResponseComparisonConfig strict) {
+					public void assertJsonContent(String expectedContent, String actualContent, TypeComparatorConfig<?> strict) {
 						responseComparator.getExp().setResponse(expectedContent);
 						responseComparator.getAct().setResponse(actualContent);
 						super.assertJsonContent(expectedContent, actualContent, strict);

@@ -74,6 +74,7 @@ public class TraceDaoImpl implements TraceDao {
                     rs.getString("VA_API_MTH"),
                     null,
                     null,
+                    null,
                     null,//TODO
                     null,// response config => json column
                     null // stable reference
