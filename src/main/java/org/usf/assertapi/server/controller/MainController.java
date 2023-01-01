@@ -156,16 +156,16 @@ public class MainController {
 					}
 					
 					@Override
-					public void assertJsonContent(String expectedContent, String actualContent, TypeComparatorConfig<?> strict) {
+					public void assertJsonContent(String expectedContent, String actualContent, TypeComparatorConfig<?> strict) throws Exception {
 						responseComparator.getExp().setResponse(expectedContent);
 						responseComparator.getAct().setResponse(actualContent);
 						super.assertJsonContent(expectedContent, actualContent, strict);
 					}
 
 					@Override
-					protected void trace(CompareStatus status, CompareStage step) {
+					public void finish(CompareStatus status) {
 						responseComparator.setStatus(status); 
-						responseComparator.setStep(step);
+						responseComparator.setStep(getCurrentStage());
 					}
 				},
 				RestTemplateBuilder.build(requireNonNull(config.refer)),
