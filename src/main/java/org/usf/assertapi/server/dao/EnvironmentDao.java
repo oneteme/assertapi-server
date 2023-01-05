@@ -1,18 +1,17 @@
 package org.usf.assertapi.server.dao;
 
-import lombok.NonNull;
-import org.usf.assertapi.server.model.ApiServerConfig;
+import org.usf.assertapi.server.model.ApiEnvironment;
 
 import java.util.List;
 
 public interface EnvironmentDao {
-    List<ApiServerConfig> selectEnvironment();
+    List<ApiEnvironment> selectEnvironment();
 
-    void insertEnvironment(long id, @NonNull ApiServerConfig serverConfig);
+    void insertEnvironment(long id, ApiEnvironment serverConfig);
 
-    void updateEnvironment(@NonNull ApiServerConfig serverConfig);
+    void updateEnvironment(long id, ApiEnvironment serverConfig);
 
-    void deleteEnvironment(@NonNull int[] ids);
+    void deleteEnvironment(long[] ids);
 
     Long nextId(String col, String table);
 }

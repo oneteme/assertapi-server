@@ -2,16 +2,8 @@ package org.usf.assertapi.server.controller;
 
 import java.util.List;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.usf.assertapi.server.model.ApiServerConfig;
+import org.springframework.web.bind.annotation.*;
+import org.usf.assertapi.server.model.ApiEnvironment;
 import org.usf.assertapi.server.service.EnvironmentService;
 
 import lombok.RequiredArgsConstructor;
@@ -25,22 +17,24 @@ public class EnvironmentController {
     private final EnvironmentService service;
 
     @GetMapping
-    public List<ApiServerConfig> get() {
+    public List<ApiEnvironment> get() {
         return service.getEnvironments();
     }
 
     @PutMapping
-    public long put(@RequestBody ApiServerConfig serverConfig) {
+    public long put(@RequestBody ApiEnvironment serverConfig) {
         return service.addEnvironment(serverConfig);
     }
 
-    @PostMapping
-    public void update(@RequestBody ApiServerConfig serverConfig) { //TODO pathvariable for ID
-        service.updateEnvironment(serverConfig);
+    @PostMapping("{id}")
+    public void update(
+            @PathVariable("id") long id,
+            @RequestBody ApiEnvironment serverConfig) {
+        service.updateEnvironment(id, serverConfig);
     }
 
     @DeleteMapping
-    public void delete(@RequestParam("id") int[] ids) {
+    public void delete(@RequestParam("id") long[] ids) {
         service.removeEnvironment(ids);
     }
 }

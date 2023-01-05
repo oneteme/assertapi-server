@@ -1,18 +1,24 @@
 package org.usf.assertapi.server.dao;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import org.usf.assertapi.core.*;
-import org.usf.assertapi.server.model.AssertionResultServer;
+import org.usf.assertapi.core.CompareStatus;
+import org.usf.assertapi.core.ComparisonResult;
+import org.usf.assertapi.core.RuntimeEnvironement;
+import org.usf.assertapi.server.model.ApiTrace;
 import org.usf.assertapi.server.model.ApiTraceGroup;
 import org.usf.assertapi.server.model.TraceGroupStatus;
 
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import static java.lang.System.currentTimeMillis;
 import static java.sql.Types.BIGINT;
@@ -24,13 +30,13 @@ import static org.usf.assertapi.server.utils.DaoUtils.ofEpochMilli;
 @RequiredArgsConstructor
 public class TraceDaoImpl implements TraceDao {
 
+    private final ObjectMapper mapper;
     private final JdbcTemplate template;
 
     @Override
-    public List<AssertionResultServer> select(long[] ids, List<String> status) {
+    public List<ApiTrace> select(long[] ids, List<String> status) {
         List<Object> args = new LinkedList<>();
-        StringBuilder q = new StringBuilder("SELECT ASR_REQ.ID_ASR, ASR_REQ.VA_EXT_HST, ASR_REQ.VA_ACT_HST, ASR_REQ.DH_EXT_STR, ASR_REQ.DH_EXT_END, ASR_REQ.DH_ACT_STR,"
-                + " ASR_REQ.DH_ACT_END, ASR_REQ.VA_REQ_STT, ASR_REQ.VA_REQ_STP, API_REQ.ID_REQ, API_REQ.VA_API_URI, API_REQ.VA_API_MTH, API_REQ.VA_API_NME, API_REQ.VA_API_DSC"
+        StringBuilder q = new StringBuilder("SELECT ASR_REQ.VA_REQ_STT, API_REQ.ID_REQ, API_REQ.VA_API_NME, API_REQ.VA_API_DSC, API_REQ.VA_API_MTH, API_REQ.VA_API_URI, API_REQ.VA_API_HDR, API_REQ.VA_API_BDY"
                 + " FROM ASR_REQ INNER JOIN API_REQ ON ASR_REQ.ID_REQ = API_REQ.ID_REQ WHERE 1=1");
         if(ids != null) {
             q.append(" AND ASR_REQ.ID_ASR IN ").append(inArgs(ids.length));
@@ -44,45 +50,20 @@ public class TraceDaoImpl implements TraceDao {
         }
         q.append(" ORDER BY ASR_REQ.ID_ASR DESC");
         var list = template.query(q.toString(), args.toArray(), (rs, i)-> {
-            var expConf = new ExecutionInfo(
-//                    rs.getString("VA_EXT_HST"),
-                    rs.getDate("DH_EXT_STR").getTime(),
-                    rs.getDate("DH_EXT_END").getTime(),
-                    0, //TODO add column size
-                    0 //TODO add column status
-            );
-            var actConf = new ExecutionInfo(
-//                    rs.getString("VA_ACT_HST"),
-                    rs.getDate("DH_ACT_STR").getTime(),
-                    rs.getDate("DH_ACT_END").getTime(),
-                    0, //TODO add column size
-                    0 //TODO add column status
-            );
-            var res = new ComparisonResult(
-//                    rs.getLong("ID_ASR"),
-                    expConf,
-                    actConf,
-                    rs.getString("VA_REQ_STT") != null ? CompareStatus.valueOf(rs.getString("VA_REQ_STT")) : null,
-                    rs.getString("VA_REQ_STP") != null ? CompareStage.valueOf(rs.getString("VA_REQ_STP")) : null
-            );
-            var req = new ApiRequest(
-                    rs.getLong("ID_REQ"),
-                    rs.getString("VA_API_NME"),
-                    0, //TODO add column version
-                    rs.getString("VA_API_DSC"),
-                    rs.getString("VA_API_URI"),
-                    rs.getString("VA_API_MTH"),
-                    null,
-                    null,
-                    null,
-                    null,//TODO
-                    null,// response config => json column
-                    null // stable reference
-            );
-            return new AssertionResultServer(
-                    res,
-                    req
-            );
+            try {
+                return new ApiTrace(
+                        rs.getLong("ID_REQ"),
+                        rs.getString("VA_API_NME"),
+                        rs.getString("VA_API_DSC"),
+                        rs.getString("VA_API_MTH"),
+                        rs.getString("VA_API_URI"),
+                        mapper.readValue(rs.getString("VA_API_HDR"), new TypeReference<Map<String, String>>(){}),
+                        rs.getString("VA_API_BDY"),
+                        rs.getString("VA_REQ_STT") != null ? CompareStatus.valueOf(rs.getString("VA_REQ_STT")) : null
+                );
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         });
         log.info("{} requests", list.size());
         return list;
@@ -103,14 +84,12 @@ public class TraceDaoImpl implements TraceDao {
             else {
                 ps.setLong(2, idReq);
             }
-//            ps.setString(3, res.getExpExecution().getHost());
-//            ps.setString(4, res.getActExecution().getHost());
-            ps.setTimestamp(5, ofEpochMilli(res.getStableApiExecution().getStart()));
-            ps.setTimestamp(6, ofEpochMilli(res.getStableApiExecution().getEnd()));
-            ps.setTimestamp(7, ofEpochMilli(res.getLatestApiExecution().getStart()));
-            ps.setTimestamp(8, ofEpochMilli(res.getLatestApiExecution().getEnd()));
-            ps.setString(9, res.getStatus().toString());
-            ps.setString(10, res.getStep() == null ? null : res.getStep().toString());
+            ps.setTimestamp(3, ofEpochMilli(res.getStableApiExecution().getStart()));
+            ps.setTimestamp(4, ofEpochMilli(res.getStableApiExecution().getEnd()));
+            ps.setTimestamp(5, ofEpochMilli(res.getLatestApiExecution().getStart()));
+            ps.setTimestamp(6, ofEpochMilli(res.getLatestApiExecution().getEnd()));
+            ps.setString(7, res.getStatus().toString());
+            ps.setString(8, res.getStep() == null ? null : res.getStep().toString());
         });
         log.info("assersion {} ==> {}", idAsr, res);
     }

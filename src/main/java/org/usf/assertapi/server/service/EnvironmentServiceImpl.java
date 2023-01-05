@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.usf.assertapi.server.dao.EnvironmentDao;
-import org.usf.assertapi.server.model.ApiServerConfig;
+import org.usf.assertapi.server.model.ApiEnvironment;
 
 import java.util.List;
 
@@ -15,13 +15,13 @@ public class EnvironmentServiceImpl implements EnvironmentService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public List<ApiServerConfig> getEnvironments() {
+    public List<ApiEnvironment> getEnvironments() {
         return dao.selectEnvironment();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public long addEnvironment(ApiServerConfig serverConfig) {
+    public long addEnvironment(ApiEnvironment serverConfig) {
         long nextId = dao.nextId("ID_ENV", "API_ENV");
         dao.insertEnvironment(nextId, serverConfig);
         return nextId;
@@ -29,13 +29,13 @@ public class EnvironmentServiceImpl implements EnvironmentService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void updateEnvironment(ApiServerConfig serverConfig) {
-        dao.updateEnvironment(serverConfig);
+    public void updateEnvironment(long id, ApiEnvironment serverConfig) {
+        dao.updateEnvironment(id, serverConfig);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void removeEnvironment(int[] ids) {
+    public void removeEnvironment(long[] ids) {
         dao.deleteEnvironment(ids);
     }
 }

@@ -10,7 +10,7 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 @Getter
 @JsonInclude(NON_NULL)
 public class ApiTraceGroup extends ApiTraceStatistic {
-    private final long id;
+    private final Long id;
     private final String user;
     private final String os;
     private final String address;
@@ -19,7 +19,7 @@ public class ApiTraceGroup extends ApiTraceStatistic {
     private final String expectedEnv;
     private final TraceGroupStatus status;
 
-    public ApiTraceGroup(long id, String user, String os, String address, String app, String actualEnv, String expectedEnv, TraceGroupStatus status, int nbTest, int nbTestSkip) {
+    public ApiTraceGroup(Long id, String user, String os, String address, String app, String actualEnv, String expectedEnv, TraceGroupStatus status, int nbTest, int nbTestSkip) {
         super(nbTest, nbTestSkip);
         this.id = id;
         this.user = user;
@@ -31,7 +31,7 @@ public class ApiTraceGroup extends ApiTraceStatistic {
         this.status = status;
     }
 
-    public ApiTraceGroup(long id, String user, String os, String address, String app, String actualEnv, String expectedEnv, TraceGroupStatus status, int nbTest, int nbTestSkip, int nbTestOk, int nbTestKo) {
+    public ApiTraceGroup(Long id, String user, String os, String address, String app, String actualEnv, String expectedEnv, TraceGroupStatus status, int nbTest, int nbTestSkip, int nbTestOk, int nbTestKo) {
         super(nbTest, nbTestSkip, nbTestOk, nbTestKo);
         this.id = id;
         this.user = user;

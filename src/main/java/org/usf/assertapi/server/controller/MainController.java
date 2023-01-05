@@ -1,54 +1,31 @@
 package org.usf.assertapi.server.controller;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
-import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.IntStream.of;
-import static org.springframework.http.ResponseEntity.ok;
-import static org.usf.assertapi.core.RuntimeEnvironement.build;
-import static org.usf.assertapi.server.model.ApiTraceStatistic.from;
-
-import java.util.List;
-import java.util.Map;
-
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import org.usf.assertapi.core.ApiAssertionFactory;
-import org.usf.assertapi.core.ApiDefaultAssertion;
-import org.usf.assertapi.core.ApiRequest;
-import org.usf.assertapi.core.HttpRequest;
-import org.usf.assertapi.core.JsonContentComparator;
-import org.usf.assertapi.core.ResponseComparatorProxy;
-import org.usf.assertapi.core.RestTemplateBuilder;
-import org.usf.assertapi.core.RuntimeEnvironement;
-import org.usf.assertapi.core.ServerConfig;
-import org.usf.assertapi.core.ContentComparator;
-import org.usf.assertapi.core.CompareStatus;
-import org.usf.assertapi.core.CompareStage;
-import org.usf.assertapi.server.model.ApiRequestGroupServer;
-import org.usf.assertapi.server.model.ApiRequestServer;
+import org.usf.assertapi.core.*;
 import org.usf.assertapi.server.model.ApiResponseServer;
 import org.usf.assertapi.server.service.RequestService;
 import org.usf.assertapi.server.service.SseService;
 import org.usf.assertapi.server.service.SseServiceImpl;
 import org.usf.assertapi.server.service.TraceService;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.Map;
+
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.IntStream.of;
+import static org.springframework.http.ResponseEntity.ok;
+import static org.usf.assertapi.core.RuntimeEnvironement.build;
+import static org.usf.assertapi.server.model.ApiTraceStatistic.from;
 
 @Slf4j
 @CrossOrigin
@@ -68,10 +45,9 @@ public class MainController {
 		this.sseService = new SseServiceImpl(traceService::updateStatus);
 	}
 
-	//TODO change it to PathParam (ctx=>id)
 	@GetMapping("subscribe")
-	public SseEmitter subscribe(@RequestParam(name="ctx") long ctx) {
-		return sseService.subscribe(ctx);
+	public SseEmitter subscribe(@RequestParam(name="id") long id) {
+		return sseService.subscribe(id);
 	}
 
 	@GetMapping("load")
@@ -115,15 +91,11 @@ public class MainController {
 		});
 		return id;
 	}
-	
-	@Deprecated // TODO  filter in db
+
 	private List<ApiRequest> requests(String app, String latestRelease, String stableRelease, int[] ids, boolean excluded) {
 
 		List<String> envs = asList(latestRelease, stableRelease);
-		var list = requestController.getAll(!excluded ? ids : null, app, envs).stream()
-				.filter(r -> r.getRequestGroupList().stream().map(ApiRequestGroupServer::getEnv).collect(toList()).containsAll(envs))
-				.map(ApiRequestServer::getRequest)
-				.collect(toList());
+		var list = requestController.get(!excluded ? ids : null, app, envs);
 		if(excluded && ids != null) { //TODO else ? 
 			of(ids).forEach(i-> list.stream().filter(t-> t.getId() == i).findAny().ifPresent(t-> t.getExecutionConfig().disable()));
 		}
@@ -169,9 +141,10 @@ public class MainController {
 					}
 				},
 				RestTemplateBuilder.build(requireNonNull(config.refer)),
-				RestTemplateBuilder.build(requireNonNull(config.target)));
+				RestTemplateBuilder.build(requireNonNull(config.target))
+		);
 
-		assertions.assertApi(request.getRequest());
+		assertions.assertApi(request);
 		return responseComparator;
 	}
 

@@ -6,7 +6,7 @@ import org.usf.assertapi.core.ServerConfig;
 
 @Getter
 @RequiredArgsConstructor
-public class ApiServerConfig {
+public class ApiEnvironment {
     private final Long id;
     private final ServerConfig serverConfig;
     private final String app;

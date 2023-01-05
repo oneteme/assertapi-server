@@ -1,18 +1,15 @@
 package org.usf.assertapi.server.dao;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 import org.usf.assertapi.core.ServerAuth;
 import org.usf.assertapi.core.ServerConfig;
-import org.usf.assertapi.server.model.ApiServerConfig;
+import org.usf.assertapi.server.model.ApiEnvironment;
 
 import java.util.List;
-import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 import static org.usf.assertapi.server.utils.DaoUtils.inArgs;
@@ -25,18 +22,19 @@ public class EnvironmentDaoImpl implements EnvironmentDao {
     private final JdbcTemplate template;
 
     @Override
-    public List<ApiServerConfig> selectEnvironment() {
+    public List<ApiEnvironment> selectEnvironment() {
         String q = "SELECT ID_ENV, VA_API_HST, VA_API_PRT, VA_API_AUT_HST, VA_API_AUT_MTH, VA_API_APP, VA_API_ENV, VA_API_PRD "
                 + "FROM API_ENV";
         var list = template.query(q, (rs, i) -> {
             var serverAuth = new ServerAuth();
             serverAuth.put("type", rs.getString("VA_API_AUT_MTH"));
             serverAuth.put("access-token-url", rs.getString("VA_API_AUT_HST"));
-            var serverConfig = new ServerConfig();
-            serverConfig.setAuth(serverAuth);
-            serverConfig.setHost(rs.getString("VA_API_HST"));
-            serverConfig.setPort(rs.getInt("VA_API_PRT"));
-            return new ApiServerConfig(
+            var serverConfig = new ServerConfig(
+                    rs.getString("VA_API_HST"),
+                    rs.getInt("VA_API_PRT"),
+                    serverAuth
+            );
+            return new ApiEnvironment(
                     rs.getLong("ID_ENV"),
                     serverConfig,
                     rs.getString("VA_API_APP"),
@@ -49,7 +47,7 @@ public class EnvironmentDaoImpl implements EnvironmentDao {
     }
 
     @Override
-    public void insertEnvironment(long id, @NonNull ApiServerConfig serverConfig) {
+    public void insertEnvironment(long id, @NonNull ApiEnvironment serverConfig) {
         var q = "INSERT INTO API_ENV(ID_ENV, VA_API_HST, VA_API_PRT, VA_API_AUT_HST, VA_API_AUT_MTH, VA_API_APP, "
                 + "VA_API_ENV, VA_API_PRD) "
                 + "VALUES(?,?,?,?,?,?,?,?)";
@@ -67,7 +65,7 @@ public class EnvironmentDaoImpl implements EnvironmentDao {
     }
 
     @Override
-    public void updateEnvironment(@NonNull ApiServerConfig serverConfig) {
+    public void updateEnvironment(@NonNull long id, @NonNull ApiEnvironment serverConfig) {
 
         var q = "UPDATE API_ENV SET VA_API_HST = ?, VA_API_PRT = ?, VA_API_AUT_HST = ?, " +
                 "VA_API_AUT_MTH = ?, VA_API_APP = ?, VA_API_ENV = ?, VA_API_PRD = ? " +
@@ -86,11 +84,11 @@ public class EnvironmentDaoImpl implements EnvironmentDao {
     }
 
     @Override
-    public void deleteEnvironment(@NonNull int[] ids) {
+    public void deleteEnvironment(@NonNull long[] ids) {
         String q = "DELETE FROM API_ENV WHERE ID_ENV IN" + inArgs(ids.length);
         template.update(q, ps-> {
             for(var i=0; i<ids.length; i++) {
-                ps.setInt(i+1, ids[i]);
+                ps.setLong(i+1, ids[i]);
             }
         });
         log.info("");

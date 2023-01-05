@@ -12,6 +12,7 @@ import java.util.List;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
+@Deprecated
 @Setter
 @Getter
 @JsonInclude(NON_NULL)
