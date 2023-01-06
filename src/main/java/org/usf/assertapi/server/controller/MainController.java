@@ -154,7 +154,7 @@ public class MainController {
 					}
 					
 					@Override
-					public void assertJsonContent(String expectedContent, String actualContent, ContentComparator<?> strict) throws Exception {
+					public void assertJsonContent(String expectedContent, String actualContent, ContentComparator<?> strict) {
 						responseComparator.getExp().setResponse(expectedContent);
 						responseComparator.getAct().setResponse(actualContent);
 						super.assertJsonContent(expectedContent, actualContent, strict);
