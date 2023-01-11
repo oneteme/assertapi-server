@@ -67,15 +67,15 @@ public class RequestDaoImpl implements RequestDao {
                                 rs.getBoolean("VA_ASR_ENB"),
                                 rs.getBoolean("VA_ASR_PRL")
                         );
-                        var apiRequest = new ApiRequest(
+                        ApiRequest apiRequest = new ApiRequest(
                                 actualId,
                                 rs.getString("VA_API_NME"),
                                 0, //TODO add version column
                                 rs.getString("VA_API_DSC"),
                                 rs.getString("VA_API_URI"),
                                 rs.getString("VA_API_MTH"),
-                                mapper.readValue(rs.getString("VA_API_HDR"), new TypeReference<Map<String, String>>(){}),
-                                rs.getString("VA_API_BDY"), 
+                                mapper.readValue(rs.getString("VA_API_HDR"), new TypeReference<Map<String, List<String>>>(){}),
+                                rs.getString("VA_API_BDY").getBytes(), 
                                 null,//TODO add acceptableStatus column
                                 conf,
                                 null,// response config => json column
@@ -122,7 +122,7 @@ public class RequestDaoImpl implements RequestDao {
                 ps.setString(2, req.getUri());
                 ps.setString(3, req.getMethod());
                 ps.setString(4, mapper.writeValueAsString(req.getHeaders()));
-                ps.setString(5, req.getBody());
+                ps.setString(5, new String(req.getBody()));
                 ps.setString(6, "UTF8"); //TODO remove this column
                 ps.setString(7, req.getName());
                 ps.setString(8, req.getDescription());
@@ -149,7 +149,7 @@ public class RequestDaoImpl implements RequestDao {
             try {
                 ps.setString(1, req.getUri());
                 ps.setString(2, req.getMethod());
-                ps.setString(3, req.getBody());
+                ps.setString(3, new String(req.getBody()));
                 ps.setString(4, req.getName());
                 ps.setString(5, req.getDescription());
                 ps.setString(6, mapper.writeValueAsString(req.getHeaders()));
