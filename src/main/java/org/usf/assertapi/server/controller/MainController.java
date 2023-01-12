@@ -24,8 +24,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.usf.assertapi.core.ApiAssertionExecutor;
 import org.usf.assertapi.core.ApiAssertionFactory;
-import org.usf.assertapi.core.ApiDefaultAssertion;
 import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.core.CompareStage;
 import org.usf.assertapi.core.CompareStatus;
@@ -137,7 +137,7 @@ public class MainController {
 		responseComparator.setAct(new ApiResponseServer());
 		responseComparator.setExp(new ApiResponseServer());
 		var request = requestService.getRequestOne(id);
-		var assertions = new ApiDefaultAssertion(
+		var assertions = new ApiAssertionExecutor(
 				new ResponseComparatorProxy(new org.usf.assertapi.core.ResponseComparator(), null){
 					@Override
 					public void assertContentType(String expectedContentType, String actualContentType) {
