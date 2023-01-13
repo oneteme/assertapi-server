@@ -77,9 +77,11 @@ public class RequestDaoImpl implements RequestDao {
                                 mapper.readValue(rs.getString("VA_API_HDR"), new TypeReference<Map<String, List<String>>>(){}),
                                 rs.getString("VA_API_BDY").getBytes(), 
                                 null,//TODO add acceptableStatus column
-                                conf,
                                 null,// response config => json column
-                                null // stable reference
+                                conf,
+                                null, // stable reference
+                                null,
+                                null
                         );
                         var apiRequestGroup = new ApiRequestGroupServer(
                                 rs.getString("VA_API_APP"),

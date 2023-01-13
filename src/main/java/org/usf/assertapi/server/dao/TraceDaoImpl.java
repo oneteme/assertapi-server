@@ -77,7 +77,9 @@ public class TraceDaoImpl implements TraceDao {
                     null,
                     null,//TODO
                     null,// response config => json column
-                    null // stable reference
+                    null, // stable reference
+                    null,
+                    null
             );
             return new AssertionResultServer(
                     res,
