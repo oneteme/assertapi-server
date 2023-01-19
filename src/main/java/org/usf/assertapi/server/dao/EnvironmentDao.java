@@ -1,17 +1,17 @@
 package org.usf.assertapi.server.dao;
 
-import org.usf.assertapi.server.model.ApiEnvironment;
+import org.usf.assertapi.server.model.Environment;
 
 import java.util.List;
 
 public interface EnvironmentDao {
-    List<ApiEnvironment> selectEnvironment();
+    List<Environment> selectEnvironment();
 
-    void insertEnvironment(long id, ApiEnvironment serverConfig);
+    void insertEnvironment(int id, Environment environment);
 
-    void updateEnvironment(long id, ApiEnvironment serverConfig);
+    void updateEnvironment(int id, Environment environment);
 
-    void deleteEnvironment(long[] ids);
+    void deleteEnvironment(int[] ids);
 
-    Long nextId(String col, String table);
+    Integer nextId(String col, String table);
 }

@@ -7,6 +7,7 @@ import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.server.dao.RequestDao;
 import org.usf.assertapi.server.exception.NotFoundException;
 import org.usf.assertapi.server.exception.TooManyResultException;
+import org.usf.assertapi.server.model.ApiMigration;
 
 import java.util.List;
 
@@ -34,20 +35,29 @@ public class RequestServiceImpl implements RequestService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public long addRequest(String app, List<String> envs, ApiRequest req) {
-        long nextId = dao.nextId("ID_REQ", "API_REQ"); //TODO db column in service
+    public long addRequest(String app, List<String> releases, ApiRequest req) {
+        int nextId = dao.nextId("ID_REQ", "O_REQ"); //TODO db column in service
         dao.insertRequest(nextId, req);
-        dao.insertRequestGroup(nextId, app, envs);
+        dao.insertRequestGroup(nextId, app, releases);
         return nextId;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void updateRequest(String app, List<String> envs, ApiRequest req) {
-        long id = req.getId();
-        dao.updateRequest(req);
+    public long[] addRequestList(String app, List<String> releases, List<ApiRequest> requests) {
+        long[] ids = new long[requests.size()];
+        for (int i = 0; i < requests.size(); i++) {
+            ids[i] = addRequest(app, releases, requests.get(i));
+        }
+        return ids;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateRequest(int id, String app, List<String> releases, ApiRequest req) {
+        dao.updateRequest(id, req);
         dao.deleteRequestGroup(id);
-        dao.insertRequestGroup(id, app, envs);
+        dao.insertRequestGroup(id, app, releases);
     }
 
     @Override
@@ -60,5 +70,21 @@ public class RequestServiceImpl implements RequestService {
     @Transactional(rollbackFor = Exception.class)
     public void updateState(int[] ids, boolean state){
         dao.updateState(ids, state);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public long addMigration(ApiMigration migration) {
+        int nextId = dao.nextId("ID_MIG", "O_REQ_MIG"); //TODO db column in service
+        dao.insertMigration(nextId, migration);
+        return nextId;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public long updateMigration(int id, ApiMigration migration) {
+        int nextId = dao.nextId("ID_MIG", "O_REQ_MIG"); //TODO db column in service
+        dao.updateMigration(nextId, migration);
+        return nextId;
     }
 }

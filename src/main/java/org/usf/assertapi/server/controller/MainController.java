@@ -111,7 +111,7 @@ public class MainController {
 		responseComparator.setAct(new ApiResponseServer());
 		responseComparator.setExp(new ApiResponseServer());
 		var request = requestService.getRequestOne(id);
-		var assertions = new ApiDefaultAssertion(
+		var assertions = new ApiAssertionExecutor(
 				new ResponseComparatorProxy(new org.usf.assertapi.core.ResponseComparator(), null){
 					@Override
 					public void assertContentType(String expectedContentType, String actualContentType) {

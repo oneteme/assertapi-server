@@ -13,7 +13,7 @@ import org.usf.assertapi.core.ComparisonResult;
 import org.usf.assertapi.core.RuntimeEnvironement;
 import org.usf.assertapi.server.model.ApiTrace;
 import org.usf.assertapi.server.model.ApiTraceGroup;
-import org.usf.assertapi.server.model.TraceGroupStatus;
+import org.usf.assertapi.server.model.ExecutionState;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -36,30 +36,30 @@ public class TraceDaoImpl implements TraceDao {
     @Override
     public List<ApiTrace> select(long[] ids, List<String> status) {
         List<Object> args = new LinkedList<>();
-        StringBuilder q = new StringBuilder("SELECT ASR_REQ.VA_REQ_STT, API_REQ.ID_REQ, API_REQ.VA_API_NME, API_REQ.VA_API_DSC, API_REQ.VA_API_MTH, API_REQ.VA_API_URI, API_REQ.VA_API_HDR, API_REQ.VA_API_BDY"
-                + " FROM ASR_REQ INNER JOIN API_REQ ON ASR_REQ.ID_REQ = API_REQ.ID_REQ WHERE 1=1");
+        StringBuilder q = new StringBuilder("SELECT O_REQ.ID_REQ, VA_NME, VA_DSC, VA_MTH, VA_URI, VA_HDR, VA_BDY, E_ASR.VA_STT,"
+                + " FROM E_ASR INNER JOIN O_REQ ON E_ASR.ID_REQ = O_REQ.ID_REQ WHERE 1=1");
         if(ids != null) {
-            q.append(" AND ASR_REQ.ID_ASR IN ").append(inArgs(ids.length));
+            q.append(" AND E_ASR.ID_EXC IN ").append(inArgs(ids.length));
             for (long id : ids) {
                 args.add(id);
             }
         }
         if(status != null) {
-            q.append(" AND VA_REQ_STT IN ").append(inArgs(status.size()));
+            q.append(" AND E_ASR.VA_STT IN ").append(inArgs(status.size()));
             args.addAll(status);
         }
-        q.append(" ORDER BY ASR_REQ.ID_ASR DESC");
+        q.append(" ORDER BY E_ASR.ID_EXC DESC");
         var list = template.query(q.toString(), args.toArray(), (rs, i)-> {
             try {
                 return new ApiTrace(
                         rs.getLong("ID_REQ"),
-                        rs.getString("VA_API_NME"),
-                        rs.getString("VA_API_DSC"),
-                        rs.getString("VA_API_MTH"),
-                        rs.getString("VA_API_URI"),
-                        mapper.readValue(rs.getString("VA_API_HDR"), new TypeReference<Map<String, String>>(){}),
-                        rs.getString("VA_API_BDY"),
-                        rs.getString("VA_REQ_STT") != null ? CompareStatus.valueOf(rs.getString("VA_REQ_STT")) : null
+                        rs.getString("VA_NME"),
+                        rs.getString("VA_DSC"),
+                        rs.getString("VA_MTH"),
+                        rs.getString("VA_URI"),
+                        mapper.readValue(rs.getString("VA_HDR"), new TypeReference<Map<String, List<String>>>(){}),
+                        rs.getString("VA_BDY"),
+                        rs.getString("VA_STT") != null ? CompareStatus.valueOf(rs.getString("VA_STT")) : null
                 );
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -72,10 +72,10 @@ public class TraceDaoImpl implements TraceDao {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void insert(long idAsr, Long idReq, @NonNull ComparisonResult res) {
-        var q = "INSERT INTO ASR_REQ(ID_ASR, ID_REQ, VA_EXT_HST, VA_ACT_HST,"
-                + " DH_EXT_STR, DH_EXT_END, DH_ACT_STR, DH_ACT_END,"
-                + " VA_REQ_STT, VA_REQ_STP)"
-                + " VALUES(?,?,?,?,?,?,?,?,?,?)";
+        var q = "INSERT INTO E_ASR(ID_EXC, ID_REQ, DH_STB_STR, DH_STB_END,"
+                + " VA_STB_SIZ, VA_STB_STT, DH_LTS_STR, DH_LTS_END, VA_LTS_SIZ, VA_LTS_STT,"
+                + " VA_STT, VA_STP)"
+                + " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         template.update(q, ps-> {
             ps.setLong(1, idAsr);
             if(idReq == null) {
@@ -86,29 +86,35 @@ public class TraceDaoImpl implements TraceDao {
             }
             ps.setTimestamp(3, ofEpochMilli(res.getStableApiExecution().getStart()));
             ps.setTimestamp(4, ofEpochMilli(res.getStableApiExecution().getEnd()));
-            ps.setTimestamp(5, ofEpochMilli(res.getLatestApiExecution().getStart()));
-            ps.setTimestamp(6, ofEpochMilli(res.getLatestApiExecution().getEnd()));
-            ps.setString(7, res.getStatus().toString());
-            ps.setString(8, res.getStep() == null ? null : res.getStep().toString());
+            ps.setInt(5, res.getStableApiExecution().getSize());
+            ps.setInt(6, res.getStableApiExecution().getStatus());
+            ps.setTimestamp(7, ofEpochMilli(res.getLatestApiExecution().getEnd()));
+            ps.setTimestamp(8, ofEpochMilli(res.getLatestApiExecution().getStart()));
+            ps.setInt(9, res.getLatestApiExecution().getSize());
+            ps.setInt(10, res.getLatestApiExecution().getStatus());
+            ps.setString(11, res.getStatus().toString());
+            ps.setString(12, res.getStep() == null ? null : res.getStep().toString());
         });
         log.info("assersion {} ==> {}", idAsr, res);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public long register(String app, String stableRelease, String latestRelease, @NonNull RuntimeEnvironement ctx, TraceGroupStatus status) {
+    public long register(@NonNull String app, @NonNull String stableRelease,@NonNull String latestRelease, @NonNull RuntimeEnvironement ctx,@NonNull ExecutionState status) {
 
         var id = currentTimeMillis();
-        var q = "INSERT INTO ASR_GRP(ID_ASR, VA_HST_USR, VA_HST_OS, VA_HST_ADR, VA_API_APP, VA_EXT_ENV, VA_ACT_ENV, VA_GRP_STT) VALUES(?,?,?,?,?,?,?,?)";
+        var q = "INSERT INTO E_ASR_EXC(ID_EXC, VA_USR, VA_OS, VA_ADR, VA_JRE, VA_BRC, VA_APP, VA_STB_RLS, VA_LTS_RLS, VA_STT) VALUES(?,?,?,?,?,?,?,?,?,?)";
         template.update(q, ps-> {
             ps.setLong(1, id);
             ps.setString(2, ctx.getUser());
             ps.setString(3, ctx.getOs());
             ps.setString(4, ctx.getAddress());
-            ps.setString(5, app);
-            ps.setString(6, latestRelease);
-            ps.setString(7, stableRelease);
-            ps.setString(8, status.name());
+            ps.setString(5, ctx.getJre());
+            ps.setString(6, ctx.getBranch());
+            ps.setString(7, app);
+            ps.setString(8, stableRelease);
+            ps.setString(9, latestRelease);
+            ps.setString(10, status.name());
         });
         log.info("registered {} ==> {}", ctx, id);
         return id;
@@ -117,24 +123,26 @@ public class TraceDaoImpl implements TraceDao {
     @Override
     public List<ApiTraceGroup> selectTraceGroup(Long id) {
         List<Object> args = new LinkedList<>();
-        StringBuilder q = new StringBuilder("SELECT ASR_GRP.ID_ASR, ASR_GRP.VA_HST_USR, ASR_GRP.VA_HST_OS, ASR_GRP.VA_HST_ADR, ASR_GRP.VA_API_APP, ASR_GRP.VA_EXT_ENV, ASR_GRP.VA_ACT_ENV, ASR_GRP.VA_GRP_STT, ASR_REQ.RESULT, ASR_REQ.OK, ASR_REQ.SKIP, ASR_REQ.KO" +
-                " FROM ASR_GRP LEFT JOIN (SELECT ID_ASR, COUNT(ID_ASR) as RESULT, COUNT(CASE WHEN VA_REQ_STT = 'OK' then 1 ELSE NULL END) as OK, COUNT(CASE WHEN VA_REQ_STT = 'SKIP' then 1 ELSE NULL END) as SKIP, COUNT(CASE WHEN VA_REQ_STT = 'KO' then 1 WHEN VA_REQ_STT = 'FAIL' then 1 ELSE NULL END) as KO FROM ASR_REQ GROUP BY ID_ASR)" +
-                " as ASR_REQ ON ASR_REQ.ID_ASR = ASR_GRP.ID_ASR");
+        StringBuilder q = new StringBuilder("SELECT E_ASR_EXC.ID_EXC, VA_USR, VA_OS, VA_ADR, VA_JRE, VA_BRC, VA_APP, VA_STB_RLS, VA_LTS_RLS, VA_STT, RESULT, OK, SKIP, KO" +
+                " FROM E_ASR_EXC LEFT JOIN (SELECT ID_EXC, COUNT(ID_EXC) as RESULT, COUNT(CASE WHEN VA_STT = 'OK' then 1 ELSE NULL END) as OK, COUNT(CASE WHEN VA_STT = 'SKIP' then 1 ELSE NULL END) as SKIP, COUNT(CASE WHEN VA_STT = 'KO' then 1 WHEN VA_STT = 'FAIL' then 1 ELSE NULL END) as KO FROM E_ASR GROUP BY ID_EXC)" +
+                " as E_ASR ON E_ASR.ID_EXC = E_ASR_EXC.ID_EXC");
         if(id != null) {
-            q.append(" WHERE ASR_GRP.ID_ASR = ? ");
+            q.append(" WHERE E_ASR_EXC.ID_EXC = ? ");
             args.add(id);
         }
-        q.append(" ORDER BY ASR_GRP.ID_ASR DESC");
+        q.append(" ORDER BY E_ASR_EXC.ID_EXC DESC");
         return template.query(q.toString(), args.toArray(), (rs, i)->
             new ApiTraceGroup(
-                    rs.getLong("ID_ASR"),
-                    rs.getString("VA_HST_USR"),
-                    rs.getString("VA_HST_OS"),
-                    rs.getString("VA_HST_ADR"),
-                    rs.getString("VA_API_APP"),
-                    rs.getString("VA_EXT_ENV"),
-                    rs.getString("VA_ACT_ENV"),
-                    rs.getString("VA_GRP_STT") != null ? TraceGroupStatus.valueOf(rs.getString("VA_GRP_STT")) : null,
+                    rs.getLong("ID_EXC"),
+                    rs.getString("VA_USR"),
+                    rs.getString("VA_OS"),
+                    rs.getString("VA_ADR"),
+                    rs.getString("VA_JRE"),
+                    rs.getString("VA_BRC"),
+                    rs.getString("VA_APP"),
+                    rs.getString("VA_STB_RLS"),
+                    rs.getString("VA_LTS_RLS"),
+                    rs.getString("VA_STT") != null ? ExecutionState.valueOf(rs.getString("VA_STT")) : null,
                     rs.getInt("RESULT"),
                     rs.getInt("SKIP"),
                     rs.getInt("OK"),
@@ -144,8 +152,8 @@ public class TraceDaoImpl implements TraceDao {
     }
 
     @Override
-    public void updateStatus(long id, TraceGroupStatus status){
-        String q = "UPDATE ASR_GRP SET VA_GRP_STT = ? WHERE ID_ASR = ? ";
+    public void updateStatus(long id, @NonNull ExecutionState status){
+        String q = "UPDATE E_ASR_EXC SET VA_STT = ? WHERE ID_EXC = ? ";
         template.update(q, ps-> {
             ps.setString(1, status.name());
             ps.setLong(2, id);

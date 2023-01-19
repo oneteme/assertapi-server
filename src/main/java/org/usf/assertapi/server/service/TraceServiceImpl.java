@@ -8,11 +8,11 @@ import org.usf.assertapi.core.RuntimeEnvironement;
 import org.usf.assertapi.server.dao.TraceDao;
 import org.usf.assertapi.server.model.ApiTrace;
 import org.usf.assertapi.server.model.ApiTraceGroup;
-import org.usf.assertapi.server.model.TraceGroupStatus;
+import org.usf.assertapi.server.model.ExecutionState;
 
 import java.util.List;
 
-import static org.usf.assertapi.server.model.TraceGroupStatus.PENDING;
+import static org.usf.assertapi.server.model.ExecutionState.PENDING;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +36,7 @@ public class TraceServiceImpl implements TraceService {
     }
 
     @Override
-    public void updateStatus(long id, TraceGroupStatus status){ //TODO update must return new Object
+    public void updateStatus(long id, ExecutionState status){ //TODO update must return new Object
         dao.updateStatus(id, status);
     }
 

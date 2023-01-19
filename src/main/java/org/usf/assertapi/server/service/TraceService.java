@@ -5,7 +5,7 @@ import org.usf.assertapi.core.ComparisonResult;
 import org.usf.assertapi.core.RuntimeEnvironement;
 import org.usf.assertapi.server.model.ApiTrace;
 import org.usf.assertapi.server.model.ApiTraceGroup;
-import org.usf.assertapi.server.model.TraceGroupStatus;
+import org.usf.assertapi.server.model.ExecutionState;
 
 import java.util.List;
 
@@ -17,7 +17,7 @@ public interface TraceService {
 
     long register(String app, String latestRelease, String stableRelease, RuntimeEnvironement env);
 
-    void updateStatus(long id, TraceGroupStatus status);
+    void updateStatus(long id, ExecutionState status);
 
     List<ApiTraceGroup> getTraceGroups(Long id);
 }

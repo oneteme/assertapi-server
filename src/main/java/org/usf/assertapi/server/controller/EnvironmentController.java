@@ -3,7 +3,7 @@ package org.usf.assertapi.server.controller;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.*;
-import org.usf.assertapi.server.model.ApiEnvironment;
+import org.usf.assertapi.server.model.Environment;
 import org.usf.assertapi.server.service.EnvironmentService;
 
 import lombok.RequiredArgsConstructor;
@@ -11,30 +11,30 @@ import lombok.RequiredArgsConstructor;
 @CrossOrigin
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/v1/assert/api/environment")
+@RequestMapping("/v1/model/environment")
 public class EnvironmentController {
 	
     private final EnvironmentService service;
 
     @GetMapping
-    public List<ApiEnvironment> get() {
+    public List<Environment> get() {
         return service.getEnvironments();
     }
 
     @PutMapping
-    public long put(@RequestBody ApiEnvironment serverConfig) {
+    public long put(@RequestBody Environment serverConfig) {
         return service.addEnvironment(serverConfig);
     }
 
     @PostMapping("{id}")
     public void update(
-            @PathVariable("id") long id,
-            @RequestBody ApiEnvironment serverConfig) {
+            @PathVariable("id") int id,
+            @RequestBody Environment serverConfig) {
         service.updateEnvironment(id, serverConfig);
     }
 
     @DeleteMapping
-    public void delete(@RequestParam("id") long[] ids) {
+    public void delete(@RequestParam("id") int[] ids) {
         service.removeEnvironment(ids);
     }
 }
