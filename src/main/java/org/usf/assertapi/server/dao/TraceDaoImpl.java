@@ -62,8 +62,8 @@ public class TraceDaoImpl implements TraceDao {
 //                    rs.getLong("ID_ASR"),
                     expConf,
                     actConf,
-                    rs.getString("VA_REQ_STT") != null ? CompareStatus.valueOf(rs.getString("VA_REQ_STT")) : null,
-                    rs.getString("VA_REQ_STP") != null ? CompareStage.valueOf(rs.getString("VA_REQ_STP")) : null
+                    rs.getString("VA_REQ_STT") != null ? ComparisonStatus.valueOf(rs.getString("VA_REQ_STT")) : null,
+                    rs.getString("VA_REQ_STP") != null ? ComparisonStage.valueOf(rs.getString("VA_REQ_STP")) : null
             );
             var req = new ApiRequest(
                     rs.getLong("ID_REQ"),
