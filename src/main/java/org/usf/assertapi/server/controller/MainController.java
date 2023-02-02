@@ -27,9 +27,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.usf.assertapi.core.ApiAssertionExecutor;
 import org.usf.assertapi.core.ApiAssertionFactory;
 import org.usf.assertapi.core.ApiRequest;
-import org.usf.assertapi.core.CompareStage;
-import org.usf.assertapi.core.CompareStatus;
-import org.usf.assertapi.core.ContentComparator;
+import org.usf.assertapi.core.ComparisonStage;
+import org.usf.assertapi.core.ComparisonStatus;
+import org.usf.assertapi.core.DataComparator;
 import org.usf.assertapi.core.ResponseComparatorProxy;
 import org.usf.assertapi.core.RestTemplateBuilder;
 import org.usf.assertapi.core.RuntimeEnvironement;
@@ -154,14 +154,14 @@ public class MainController {
 					}
 					
 					@Override
-					public void assertJsonContent(String expectedContent, String actualContent, ContentComparator<?> strict) {
+					public void assertJsonContent(String expectedContent, String actualContent, DataComparator<?> strict) {
 						responseComparator.getExp().setResponse(expectedContent);
 						responseComparator.getAct().setResponse(actualContent);
 						super.assertJsonContent(expectedContent, actualContent, strict);
 					}
 
 					@Override
-					public void finish(CompareStatus status) {
+					public void finish(ComparisonStatus status) {
 						responseComparator.setStatus(status); 
 						responseComparator.setStep(getCurrentStage());
 					}
@@ -187,7 +187,7 @@ public class MainController {
 	public static final class ResponseComparator {
 		private ApiResponseServer exp;
 		private ApiResponseServer act;
-		private CompareStatus status;
-		private CompareStage step;
+		private ComparisonStatus status;
+		private ComparisonStage step;
 	}
 }
