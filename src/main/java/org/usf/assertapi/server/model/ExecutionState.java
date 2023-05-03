@@ -1,6 +1,6 @@
 package org.usf.assertapi.server.model;
 
-public enum TraceGroupStatus {
+public enum ExecutionState {
 	
     PENDING, DONE, ABORTED;
 }

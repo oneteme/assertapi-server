@@ -2,15 +2,15 @@ package org.usf.assertapi.server.service;
 
 import java.util.List;
 
-import org.usf.assertapi.server.model.ApiServerConfig;
+import org.usf.assertapi.server.model.Environment;
 
 public interface EnvironmentService {
 	
-    List<ApiServerConfig> getEnvironments();
+    List<Environment> getEnvironments();
 
-    long addEnvironment(ApiServerConfig serverConfig);
+    long addEnvironment(Environment serverConfig);
 
-    void updateEnvironment(ApiServerConfig serverConfig);
+    void updateEnvironment(int id, Environment serverConfig);
 
     void removeEnvironment(int[] ids);
 }

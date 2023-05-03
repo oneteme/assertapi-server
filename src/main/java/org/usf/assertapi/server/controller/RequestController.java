@@ -1,30 +1,19 @@
 package org.usf.assertapi.server.controller;
 
-import static java.util.stream.Collectors.toList;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+import org.usf.assertapi.core.ApiRequest;
+import org.usf.assertapi.core.ContentComparator;
+import org.usf.assertapi.server.model.ApiMigration;
+import org.usf.assertapi.server.service.RequestService;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.usf.assertapi.core.ApiRequest;
-import org.usf.assertapi.server.model.ApiRequestServer;
-import org.usf.assertapi.server.service.RequestService;
-
-import lombok.RequiredArgsConstructor;
-
 @CrossOrigin
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/v1/assert/api/request")
+@RequestMapping("/v1/model/request")
 public class RequestController {
     
 	private final RequestService service;
@@ -34,31 +23,39 @@ public class RequestController {
             @RequestParam(name="id", required = false) int[] ids,
             @RequestParam(name="app", required = false) String app,
             @RequestParam(name="env", required = false) List<String> envs) {
-        return getAll(ids, app, envs).stream().map(ApiRequestServer::getRequest).collect(toList());
+        return service.getRequestList(ids, app, envs != null ? envs : new ArrayList<>());
     }
 
     @PutMapping //TODO put env + app in path no => delete  ApiRequestServer
-    public long put(@RequestBody ApiRequestServer query) {
-        return service.addRequest(query);
+    public long put(
+            @RequestParam(name="app") String app,
+            @RequestParam(name="release") List<String> releases,
+            @RequestBody ApiRequest query
+    ) {
+        return service.addRequest(app, releases, query);
     }
 
-    @PostMapping //TODO put env + app in path no => delete  ApiRequestServer & no need to couple 
-    public void update(@RequestBody ApiRequestServer query) {
-        service.updateRequest(query);
+    @PutMapping("import")
+    public long[] putImport(
+            @RequestParam(name="app") String app,
+            @RequestParam(name="release") List<String> releases,
+            @RequestBody List<ApiRequest> queries
+    ) {
+        return service.addRequestList(app, releases, queries);
+    }
+
+    @PostMapping("{id}") //TODO put env + app in path no => delete  ApiRequestServer & no need to couple
+    public void update(
+            @PathVariable("id") int id,
+            @RequestParam("app") String app,
+            @RequestParam("release") List<String> releases,
+            @RequestBody ApiRequest query) {
+        service.updateRequest(id, app, releases, query);
     }
 
     @DeleteMapping
     public void delete(@RequestParam("id") int[] ids) {
         service.removeRequest(ids);
-    }
-
-    @Deprecated(forRemoval = true)
-    @GetMapping("all")  //TODO env & app not important in response ???
-    public List<ApiRequestServer> getAll(
-            @RequestParam(name="id", required = false) int[] ids,
-            @RequestParam(name="app", required = false) String app,
-            @RequestParam(name="env", required = false) List<String> envs) {
-        return service.getRequestList(ids, envs != null ? envs : new ArrayList<>(), app);
     }
 
     @PatchMapping("enable")
@@ -70,5 +67,4 @@ public class RequestController {
     public void disable(@RequestParam("id") int[] ids) {
         service.updateState(ids, false);
     }
-
 }

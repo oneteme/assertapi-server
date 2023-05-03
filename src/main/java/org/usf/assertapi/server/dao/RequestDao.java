@@ -1,28 +1,27 @@
 package org.usf.assertapi.server.dao;
 
-import java.util.List;
-
-import org.usf.assertapi.core.ApiRequest;
-import org.usf.assertapi.server.model.ApiRequestGroupServer;
-import org.usf.assertapi.server.model.ApiRequestServer;
-
 import lombok.NonNull;
+import org.usf.assertapi.core.ApiRequest;
+import org.usf.assertapi.core.ContentComparator;
+import org.usf.assertapi.server.model.ApiMigration;
+
+import java.util.List;
 
 public interface RequestDao {
 
-    List<ApiRequestServer> selectRequest(int[] ids, List<String> envs, String app);
+    List<ApiRequest> selectRequest(int[] ids, String app, List<String> envs);
 
-    void insertRequest(long id, @NonNull ApiRequest req);
+    void insertRequest(int id, ApiRequest req);
 
-    void insertRequestGroup(long id, @NonNull List<ApiRequestGroupServer> requestGroupList);
+    void updateRequest(int id, ApiRequest req);
 
-    void deleteRequestGroup(long id);
+    void deleteRequest(int[] ids);
 
-    void updateRequest(@NonNull ApiRequest req);
+    void insertRequestGroup(int id, String app, List<String> releases);
 
-    void deleteRequest(@NonNull int[] id);
+    void deleteRequestGroup(int id);
 
-    void updateState(@NonNull int[] id, boolean state);
+    void updateState(int[] ids, boolean state);
 
-    Long nextId(String col, String table);
+    Integer nextId(String col, String table);
 }

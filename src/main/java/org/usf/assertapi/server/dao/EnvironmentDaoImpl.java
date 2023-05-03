@@ -1,18 +1,19 @@
 package org.usf.assertapi.server.dao;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 import org.usf.assertapi.core.ServerAuth;
 import org.usf.assertapi.core.ServerConfig;
-import org.usf.assertapi.server.model.ApiServerConfig;
+import org.usf.assertapi.server.model.Environment;
 
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
 import static org.usf.assertapi.server.utils.DaoUtils.inArgs;
@@ -22,83 +23,93 @@ import static org.usf.assertapi.server.utils.DaoUtils.inArgs;
 @RequiredArgsConstructor
 public class EnvironmentDaoImpl implements EnvironmentDao {
 
+    private final ObjectMapper mapper;
     private final JdbcTemplate template;
 
     @Override
-    public List<ApiServerConfig> selectEnvironment() {
-        String q = "SELECT ID_ENV, VA_API_HST, VA_API_PRT, VA_API_AUT_HST, VA_API_AUT_MTH, VA_API_APP, VA_API_ENV, VA_API_PRD "
-                + "FROM API_ENV";
+    public List<Environment> selectEnvironment() {
+        String q = "SELECT ID_ENV, VA_HST, VA_PRT, VA_APP, VA_RLS, FL_PRD, AUT_CNF"
+                + " FROM R_ENV";
         var list = template.query(q, (rs, i) -> {
-            var serverAuth = new ServerAuth();
-            serverAuth.put("type", rs.getString("VA_API_AUT_MTH"));
-            serverAuth.put("access-token-url", rs.getString("VA_API_AUT_HST"));
-            var serverConfig = new ServerConfig();
-            serverConfig.setAuth(serverAuth);
-            serverConfig.setHost(rs.getString("VA_API_HST"));
-            serverConfig.setPort(rs.getInt("VA_API_PRT"));
-            return new ApiServerConfig(
-                    rs.getLong("ID_ENV"),
-                    serverConfig,
-                    rs.getString("VA_API_APP"),
-                    rs.getString("VA_API_ENV"),
-                    rs.getBoolean("VA_API_PRD")
-            );
+            try {
+                var serverConfig = new ServerConfig(
+                        rs.getString("VA_HST"),
+                        rs.getInt("VA_PRT"),
+                        mapper.readValue(rs.getString("AUT_CNF"), new TypeReference<ServerAuth>(){})
+                );
+                return new Environment(
+                        rs.getLong("ID_ENV"),
+                        rs.getString("VA_APP"),
+                        rs.getString("VA_RLS"),
+                        rs.getBoolean("FL_PRD"),
+                        serverConfig
+                );
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
         });
         log.info("{} environments", list.size());
         return list;
     }
 
     @Override
-    public void insertEnvironment(long id, @NonNull ApiServerConfig serverConfig) {
-        var q = "INSERT INTO API_ENV(ID_ENV, VA_API_HST, VA_API_PRT, VA_API_AUT_HST, VA_API_AUT_MTH, VA_API_APP, "
-                + "VA_API_ENV, VA_API_PRD) "
-                + "VALUES(?,?,?,?,?,?,?,?)";
+    public void insertEnvironment(int id, @NonNull Environment environment) {
+        var q = "INSERT INTO R_ENV(ID_ENV, VA_HST, VA_PRT, VA_APP, VA_RLS, FL_PRD, AUT_CNF)"
+                + " VALUES(?,?,?,?,?,?,?)";
         template.update(q, ps-> {
-            ps.setLong(1, id);
-            ps.setString(2, serverConfig.getServerConfig().getHost());
-            ps.setInt(3, serverConfig.getServerConfig().getPort());
-            ps.setString(4, serverConfig.getServerConfig().getAuth() == null ? null : serverConfig.getServerConfig().getAuth().getAccessTokenUrl());
-            ps.setString(5, serverConfig.getServerConfig().getAuth() == null ? null : serverConfig.getServerConfig().getAuth().getAuthMethod());
-            ps.setString(6, serverConfig.getApp());
-            ps.setString(7, serverConfig.getEnv());
-            ps.setBoolean(8, serverConfig.isProd());
+            try {
+                ps.setLong(1, id);
+                ps.setString(2, environment.getServerConfig().getHost());
+                ps.setInt(3, environment.getServerConfig().getPort());
+                ps.setString(4, environment.getApp());
+                ps.setString(5, environment.getRelease());
+                ps.setBoolean(6, environment.isProd());
+                ps.setString(7, mapper.writeValueAsString(environment.getServerConfig().getAuth()));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
         });
-        log.info("Environment added {}", serverConfig);
+        log.info("Environment added {}", environment);
     }
 
     @Override
-    public void updateEnvironment(@NonNull ApiServerConfig serverConfig) {
+    public void updateEnvironment(int id, @NonNull Environment environment) {
 
-        var q = "UPDATE API_ENV SET VA_API_HST = ?, VA_API_PRT = ?, VA_API_AUT_HST = ?, " +
-                "VA_API_AUT_MTH = ?, VA_API_APP = ?, VA_API_ENV = ?, VA_API_PRD = ? " +
-                "WHERE ID_ENV = ?";
+        var q = "UPDATE R_ENV SET VA_HST = ?, VA_PRT = ?,"
+                + " VA_APP = ?, VA_RLS = ?, FL_PRD = ?, AUT_CNF = ?"
+                + " WHERE ID_ENV = ?";
         template.update(q, ps-> {
-            ps.setString(1, serverConfig.getServerConfig().getHost());
-            ps.setInt(2, serverConfig.getServerConfig().getPort());
-            ps.setString(3, serverConfig.getServerConfig().getAuth() != null ? serverConfig.getServerConfig().getAuth().getAccessTokenUrl() : null);
-            ps.setString(4, serverConfig.getServerConfig().getAuth() != null ? serverConfig.getServerConfig().getAuth().getAuthMethod() : null);
-            ps.setString(5, serverConfig.getApp());
-            ps.setString(6, serverConfig.getEnv());
-            ps.setBoolean(7, serverConfig.isProd());
-            ps.setLong(8, serverConfig.getId());
+            try {
+                ps.setString(1, environment.getServerConfig().getHost());
+                ps.setInt(2, environment.getServerConfig().getPort());
+                ps.setString(3, environment.getServerConfig().getAuth() != null ? environment.getServerConfig().getAuth().getAccessTokenUrl() : null);
+                ps.setString(4, environment.getServerConfig().getAuth() != null ? environment.getServerConfig().getAuth().getAuthMethod() : null);
+                ps.setString(5, environment.getApp());
+                ps.setString(6, environment.getRelease());
+                ps.setBoolean(7, environment.isProd());
+                ps.setString(8, mapper.writeValueAsString(environment.getServerConfig().getAuth()));
+                ps.setLong(9, environment.getId());
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
         });
-        log.info("environment updated : {}", serverConfig);
+        log.info("environment updated : {}", environment);
     }
 
     @Override
-    public void deleteEnvironment(@NonNull int[] ids) {
-        String q = "DELETE FROM API_ENV WHERE ID_ENV IN" + inArgs(ids.length);
+    public void deleteEnvironment(int[] ids) {
+        String q = "DELETE FROM R_ENV WHERE ID_ENV IN" + inArgs(ids.length);
         template.update(q, ps-> {
             for(var i=0; i<ids.length; i++) {
-                ps.setInt(i+1, ids[i]);
+                ps.setLong(i+1, ids[i]);
             }
         });
         log.info("");
     }
 
     @Override
-    public Long nextId(String col, String table) {
-        return template.query("SELECT MAX(" + col + ") FROM " + table,
-                rs-> rs.next() ? rs.getLong(1) : 0) + 1;
+    public Integer nextId(@NonNull String col, @NonNull String table) {
+        return requireNonNull(template.query("SELECT MAX(" + col + ") FROM " + table,
+                rs-> rs.next() ? rs.getInt(1) : 0)) + 1;
     }
 }

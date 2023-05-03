@@ -10,11 +10,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+@Deprecated
 @Getter
 @JsonInclude(NON_NULL)
 @RequiredArgsConstructor
 public class AssertionResultServer {
-	
+	private final Long id;
     private final ComparisonResult result;
     private final HttpRequest request;
 }

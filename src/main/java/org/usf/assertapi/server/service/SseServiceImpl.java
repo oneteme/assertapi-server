@@ -2,8 +2,8 @@ package org.usf.assertapi.server.service;
 
 import static java.util.Map.entry;
 import static org.usf.assertapi.server.model.ApiTraceStatistic.NO_STAT;
-import static org.usf.assertapi.server.model.TraceGroupStatus.ABORTED;
-import static org.usf.assertapi.server.model.TraceGroupStatus.DONE;
+import static org.usf.assertapi.server.model.ExecutionState.ABORTED;
+import static org.usf.assertapi.server.model.ExecutionState.DONE;
 
 import java.io.IOException;
 import java.util.Map;
@@ -14,7 +14,7 @@ import java.util.function.BiConsumer;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.usf.assertapi.core.ComparisonResult;
 import org.usf.assertapi.server.model.ApiTraceStatistic;
-import org.usf.assertapi.server.model.TraceGroupStatus;
+import org.usf.assertapi.server.model.ExecutionState;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 public final class SseServiceImpl implements SseService {
 
     private static final Map<Long, Entry<ApiTraceStatistic, SseEmitter>> sseEmitters = new ConcurrentHashMap<>();
-    private final BiConsumer<Long, TraceGroupStatus> action;
+    private final BiConsumer<Long, ExecutionState> action;
 
     @Override
     public SseEmitter subscribe(long id) {

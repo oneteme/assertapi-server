@@ -1,24 +1,22 @@
 package org.usf.assertapi.server.dao;
 
-import java.util.List;
-
-import org.usf.assertapi.core.RuntimeEnvironement;
 import org.usf.assertapi.core.ComparisonResult;
-import org.usf.assertapi.server.model.AssertionResultServer;
+import org.usf.assertapi.core.RuntimeEnvironement;
+import org.usf.assertapi.server.model.ApiTrace;
 import org.usf.assertapi.server.model.ApiTraceGroup;
-import org.usf.assertapi.server.model.TraceGroupStatus;
+import org.usf.assertapi.server.model.ExecutionState;
 
-import lombok.NonNull;
+import java.util.List;
 
 public interface TraceDao {
 	
-    List<AssertionResultServer> select(long[] ids, List<String> status);
+    List<ApiTrace> select(long[] ids, List<String> status);
 
-    void insert(long idAsr, Long idReq, @NonNull ComparisonResult res);
+    void insert(long idAsr, Long idReq, ComparisonResult res);
 
-    long register(String app, String stableRelease, String latestRelease, RuntimeEnvironement ctx, TraceGroupStatus status);
+    long register(String app, String stableRelease, String latestRelease, RuntimeEnvironement ctx, ExecutionState status);
 
     List<ApiTraceGroup> selectTraceGroup(Long id);
 
-    void updateStatus(long id, TraceGroupStatus status);
+    void updateStatus(long id, ExecutionState status);
 }

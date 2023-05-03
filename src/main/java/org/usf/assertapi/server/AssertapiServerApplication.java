@@ -19,7 +19,7 @@ public class AssertapiServerApplication {
 	}
 
     @Bean
-    @Primary
+	@Primary
 	public static final ObjectMapper defaultObjectMapper() {
 		return defaultMapper()
 			.registerModule(new JavaTimeModule()) //not sure !
