@@ -30,8 +30,8 @@ public class TraceController {
         service.addTrace(idAsr, idReq, result);
     }
 
-    @GetMapping("{asrID}/group")
-    public List<ApiTraceGroup> get(@PathVariable(name="asrID", required = false) long id) {
+    @GetMapping("group")
+    public List<ApiTraceGroup> get(@RequestParam(name="asrID", required = false) Long id) {
         return service.getTraceGroups(id);
     }
 }

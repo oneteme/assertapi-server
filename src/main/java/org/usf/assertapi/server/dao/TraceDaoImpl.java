@@ -8,8 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import org.usf.assertapi.core.CompareStatus;
 import org.usf.assertapi.core.ComparisonResult;
+import org.usf.assertapi.core.ComparisonStatus;
 import org.usf.assertapi.core.RuntimeEnvironement;
 import org.usf.assertapi.server.model.ApiTrace;
 import org.usf.assertapi.server.model.ApiTraceGroup;
@@ -59,7 +59,7 @@ public class TraceDaoImpl implements TraceDao {
                         rs.getString("VA_URI"),
                         mapper.readValue(rs.getString("VA_HDR"), new TypeReference<Map<String, List<String>>>(){}),
                         rs.getString("VA_BDY"),
-                        rs.getString("VA_STT") != null ? CompareStatus.valueOf(rs.getString("VA_STT")) : null
+                        rs.getString("VA_STT") != null ? ComparisonStatus.valueOf(rs.getString("VA_STT")) : null
                 );
             } catch (IOException e) {
                 throw new RuntimeException(e);

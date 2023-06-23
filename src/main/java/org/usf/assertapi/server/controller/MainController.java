@@ -84,7 +84,7 @@ public class MainController {
 			sseService.update(id, e);
 		})
 		.build()
-		.assertAllAsync(()->{
+		.assertAsync(()->{
 			var list = requests(app, latestRelease, stableRelease, ids, excluded);
 			sseService.start(id, from(list));
 			return list.stream();
@@ -97,55 +97,49 @@ public class MainController {
 		List<String> envs = asList(latestRelease, stableRelease);
 		var list = requestController.get(!excluded ? ids : null, app, envs);
 		if(excluded && ids != null) { //TODO else ? 
-			of(ids).forEach(i-> list.stream().filter(t-> t.getId() == i).findAny().ifPresent(t-> t.getExecutionConfig().disable()));
+			of(ids).forEach(i-> list.stream().filter(t-> t.getId() == i).findAny().ifPresent(t-> t.getExecution().disable()));
 		}
 		return list;
 	}
 
 	@PostMapping("run/{id}")
-	public ResponseComparator run(
+	public ResponseCompare run(
 			@PathVariable("id") int id,
 			@RequestBody Configuration config) {
 		
-		var responseComparator = new ResponseComparator();
-		responseComparator.setAct(new ApiResponseServer());
-		responseComparator.setExp(new ApiResponseServer());
+		var runResponseComparator = new ResponseCompare();
+		runResponseComparator.setAct(new ApiResponseServer());
+		runResponseComparator.setExp(new ApiResponseServer());
 		var request = requestService.getRequestOne(id);
-		var assertions = new ApiAssertionExecutor(
-				new ResponseComparatorProxy(new org.usf.assertapi.core.ResponseComparator(), null){
-					@Override
-					public void assertContentType(String expectedContentType, String actualContentType) {
-						responseComparator.getExp().setContentType(expectedContentType);
-						responseComparator.getAct().setContentType(actualContentType);
-						super.assertContentType(expectedContentType, actualContentType);
-					}
+		var assertions = new ResponseComparatorProxy(new ResponseComparator(), null) {
+			@Override
+			public void assertContentType(String expectedContentType, String actualContentType) {
+				runResponseComparator.getExp().setContentType(expectedContentType);
+				runResponseComparator.getAct().setContentType(actualContentType);
+				super.assertContentType(expectedContentType, actualContentType);
+			}
+			@Override
+			public void assertStatusCode(int expectedStatusCode, int actualStatusCode) {
+				runResponseComparator.getExp().setStatusCode(expectedStatusCode);
+				runResponseComparator.getAct().setStatusCode(actualStatusCode);
+				super.assertStatusCode(expectedStatusCode, actualStatusCode);
+			}
 
-					@Override
-					public void assertStatusCode(int expectedStatusCode, int actualStatusCode) {
-						responseComparator.getExp().setStatusCode(expectedStatusCode);
-						responseComparator.getAct().setStatusCode(actualStatusCode);
-						super.assertStatusCode(expectedStatusCode, actualStatusCode);
-					}
-					
-					@Override
-					public void assertJsonContent(String expectedContent, String actualContent, ContentComparator<?> strict) {
-						responseComparator.getExp().setResponse(expectedContent);
-						responseComparator.getAct().setResponse(actualContent);
-						super.assertJsonContent(expectedContent, actualContent, strict);
-					}
+			@Override
+			public void assertJsonContent(String expected, String actual, ModelComparator<?> config) {
+				runResponseComparator.getExp().setResponse(expected);
+				runResponseComparator.getAct().setResponse(actual);
+				super.assertJsonContent(expected, actual, config);
+			}
 
-					@Override
-					public void finish(CompareStatus status) {
-						responseComparator.setStatus(status); 
-						responseComparator.setStep(getCurrentStage());
-					}
-				},
-				RestTemplateBuilder.build(requireNonNull(config.refer)),
-				RestTemplateBuilder.build(requireNonNull(config.target))
-		);
-
+			@Override
+			public void finish(ComparisonStatus status) {
+				runResponseComparator.setStatus(status);
+				runResponseComparator.setStep(getCurrentStage());
+			}
+		};
 		assertions.assertApi(request);
-		return responseComparator;
+		return runResponseComparator;
 	}
 
 	@Getter
@@ -159,10 +153,10 @@ public class MainController {
 	@Getter
 	@Setter
 	@NoArgsConstructor
-	public static final class ResponseComparator {
+	public static final class ResponseCompare {
 		private ApiResponseServer exp;
 		private ApiResponseServer act;
-		private CompareStatus status;
-		private CompareStage step;
+		private ComparisonStatus status;
+		private ComparisonStage step;
 	}
 }

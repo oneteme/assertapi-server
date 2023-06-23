@@ -62,32 +62,24 @@ public class RequestDaoImpl implements RequestDao {
         q.append(" ORDER BY VA_NME ASC");
 
         var list = template.query(q.toString(), args.toArray(), (rs, i) -> {
-            ApiRequest request = null;
+
             try {
-                var conf = new ExecutionConfig(
-                        rs.getBoolean("VA_ENB"),
-                        rs.getBoolean("VA_PRL")
-                );
-                request = new ApiRequest(
-                        rs.getLong("ID_REQ"),
-                        rs.getString("VA_NME"),
-                        rs.getInt("VA_VRS"),
-                        rs.getString("VA_DSC"),
-                        rs.getString("VA_URI"),
-                        rs.getString("VA_MTH"),
-                        mapper.readValue(rs.getString("VA_HDR"), new TypeReference<Map<String, List<String>>>(){}),
-                        rs.getString("VA_BDY") != null ? rs.getString("VA_BDY").getBytes() : null,
-                        null,
-                        Stream.of(rs.getString("VA_STT").split(",")).mapToInt(Integer::parseInt).toArray(),
-                        conf,
-                        mapper.readValue(rs.getString("CNT_CMP"), new TypeReference<ContentComparator<?>>(){}),// response config => json column
-                        null, // stable reference
-                        null
-                );
+                ApiRequest request = new ApiRequest();
+                request.setId(rs.getLong("ID_REQ"));
+                request.setName(rs.getString("VA_NME"));
+                request.setVersion(rs.getInt("VA_VRS"));
+                request.setDescription(rs.getString("VA_DSC"));
+                request.setUri(rs.getString("VA_URI"));
+                request.setMethod(rs.getString("VA_MTH"));
+                request.setHeaders(mapper.readValue(rs.getString("VA_HDR"), new TypeReference<Map<String, List<String>>>(){}));
+                request.setBody(rs.getString("VA_BDY") != null ? rs.getString("VA_BDY").getBytes() : null);
+                request.setAccept(Stream.of(rs.getString("VA_STT").split(",")).mapToInt(Integer::parseInt).toArray());
+                request.setExecution(new ExecutionConfig(rs.getBoolean("VA_ENB"), rs.getBoolean("VA_PRL")));
+                request.setComparator(mapper.readValue(rs.getString("CNT_CMP"), new TypeReference<ModelComparator<?>>(){}));
+                return request;
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            return request;
         });
         log.info("app={}, env={} ==> {} requests", app, envs, list.size());
         return list;
@@ -109,10 +101,10 @@ public class RequestDaoImpl implements RequestDao {
                 ps.setString(6, req.getName());
                 ps.setString(7, req.getDescription());
                 ps.setInt(8, req.getVersion());
-                ps.setBoolean(9, req.getExecutionConfig().isParallel());
-                ps.setBoolean(10, req.getExecutionConfig().isEnabled());
-                ps.setString(11, Arrays.stream(req.getAcceptableStatus()).mapToObj(String::valueOf).collect(Collectors.joining(",")));
-                ps.setString(12, mapper.writeValueAsString(req.getContentComparator()));
+                ps.setBoolean(9, req.getExecution().isParallel());
+                ps.setBoolean(10, req.getExecution().isEnabled());
+                ps.setString(11, Arrays.stream(req.getAccept()).mapToObj(String::valueOf).collect(Collectors.joining(",")));
+                ps.setString(12, mapper.writeValueAsString(req.getComparators()));
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
@@ -135,10 +127,10 @@ public class RequestDaoImpl implements RequestDao {
                 ps.setString(5, req.getDescription());
                 ps.setString(6, mapper.writeValueAsString(req.getHeaders()));
                 ps.setInt(7, req.getVersion());
-                ps.setBoolean(8, req.getExecutionConfig().isParallel());
-                ps.setBoolean(9, req.getExecutionConfig().isEnabled());
-                ps.setString(10, Arrays.toString(req.getAcceptableStatus()));
-                ps.setString(11, mapper.writeValueAsString(req.getContentComparator()));
+                ps.setBoolean(8, req.getExecution().isParallel());
+                ps.setBoolean(9, req.getExecution().isEnabled());
+                ps.setString(10, Arrays.toString(req.getAccept()));
+                ps.setString(11, mapper.writeValueAsString(req.getComparators()));
                 ps.setLong(12, id);
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);

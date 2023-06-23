@@ -3,8 +3,6 @@ package org.usf.assertapi.server.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.usf.assertapi.core.ApiRequest;
-import org.usf.assertapi.core.ContentComparator;
-import org.usf.assertapi.server.model.ApiMigration;
 import org.usf.assertapi.server.service.RequestService;
 
 import java.util.ArrayList;
@@ -13,7 +11,7 @@ import java.util.List;
 @CrossOrigin
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/v1/model/request")
+@RequestMapping("/v1/modelization/request")
 public class RequestController {
     
 	private final RequestService service;

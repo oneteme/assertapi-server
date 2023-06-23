@@ -11,10 +11,11 @@ import lombok.RequiredArgsConstructor;
 @CrossOrigin
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/v1/model/environment")
+@RequestMapping("/v1/modelization/environment")
 public class EnvironmentController {
 	
     private final EnvironmentService service;
+
 
     @GetMapping
     public List<Environment> get() {
