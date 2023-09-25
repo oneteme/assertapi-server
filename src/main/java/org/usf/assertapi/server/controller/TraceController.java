@@ -1,44 +1,37 @@
 package org.usf.assertapi.server.controller;
 
-import java.util.List;
-
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 import org.usf.assertapi.core.ComparisonResult;
-import org.usf.assertapi.server.model.ApiTraceGroup;
-import org.usf.assertapi.server.model.AssertionResultServer;
+import org.usf.assertapi.server.model.AssertionExecution;
+import org.usf.assertapi.server.model.AssertionResult;
 import org.usf.assertapi.server.service.TraceService;
 
-import lombok.RequiredArgsConstructor;
+import java.util.List;
 
 @CrossOrigin
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/v1/assert/api/trace")
+@RequestMapping("/v1/non_regression/trace")
 public class TraceController {
     
 	private final TraceService service;
 
-    @GetMapping
-    public List<AssertionResultServer> get( //TODO maybe create one class that merge fields ?
-            @RequestParam(name="id", required = false) long[] ids,
-            @RequestParam(name = "status", required = false) List<String> status) {
-        return service.getTraces(ids, status);
+    @GetMapping("assertion_result")
+    public List<AssertionResult> get(@RequestParam(name="id", required = false) long[] ids,
+                                     @RequestParam(name = "status", required = false) List<String> status) {
+        return service.get(ids, status);
     }
 
-    @PutMapping("{id}") //TODO /v1/nonregression/{asrID}/api/{reqID}/trace ?
-    public void put(@PathVariable("id") long id, @RequestBody ComparisonResult result) {
-        service.addTrace(id, 0L, result);
+    @GetMapping("assertion_execution")
+    public List<AssertionExecution> get(@RequestParam(name="asrID", required = false) Long id) {
+        return service.get(id);
     }
 
-    @GetMapping("group")
-    public List<ApiTraceGroup> get(@RequestParam(name="id", required = false) Long id) {
-        return service.getTraceGroups(id);
+    @PutMapping("{asrID}/api/{reqID}")
+    public void put(@PathVariable("asrID") long idAsr,
+                    @PathVariable("reqID") long idReq,
+                    @RequestBody ComparisonResult result) {
+        service.addTrace(idAsr, idReq, result);
     }
 }

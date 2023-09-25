@@ -1,24 +1,24 @@
 package org.usf.assertapi.server.service;
 
-import java.util.List;
-
-import org.usf.assertapi.core.RuntimeEnvironement;
-import org.usf.assertapi.core.ComparisonResult;
-import org.usf.assertapi.server.model.AssertionResultServer;
-import org.usf.assertapi.server.model.ApiTraceGroup;
-import org.usf.assertapi.server.model.TraceGroupStatus;
-
 import lombok.NonNull;
+import org.usf.assertapi.core.ComparisonResult;
+import org.usf.assertapi.core.RuntimeEnvironement;
+import org.usf.assertapi.server.model.AssertionExecution;
+import org.usf.assertapi.server.model.AssertionResult;
+import org.usf.assertapi.server.model.ExecutionState;
+
+import java.util.List;
 
 public interface TraceService {
 
-    List<AssertionResultServer> getTraces(long[] ids, List<String> status);
+    List<AssertionResult> get(long[] ids, List<String> status);
+
+    List<AssertionExecution> get(Long id);
 
     void addTrace(long idAsr, Long idReq, @NonNull ComparisonResult res);
 
     long register(String app, String latestRelease, String stableRelease, RuntimeEnvironement env);
 
-    void updateStatus(long id, TraceGroupStatus status);
+    void updateStatus(long id, ExecutionState status);
 
-    List<ApiTraceGroup> getTraceGroups(Long id);
 }

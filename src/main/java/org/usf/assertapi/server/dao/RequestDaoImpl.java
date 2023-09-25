@@ -9,15 +9,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.CollectionUtils;
-import org.usf.assertapi.core.ApiRequest;
-import org.usf.assertapi.core.HttpRequest;
-import org.usf.assertapi.core.ExecutionConfig;
-import org.usf.assertapi.server.model.ApiRequestGroupServer;
+import org.usf.assertapi.core.*;
 import org.usf.assertapi.server.model.ApiRequestServer;
+import org.usf.assertapi.server.utils.StringBuilder;
 
 import java.io.IOException;
+import java.sql.Array;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static java.nio.charset.StandardCharsets.*;
+import static java.util.Collections.emptyMap;
+import static java.util.Objects.requireNonNull;
+import static org.usf.assertapi.core.Utils.*;
 import static org.usf.assertapi.server.utils.DaoUtils.inArgs;
 
 @Slf4j
@@ -29,111 +34,101 @@ public class RequestDaoImpl implements RequestDao {
     private final JdbcTemplate template;
 
     @Override
-    public List<ApiRequestServer> selectRequest(int[] ids, List<String> envs, String app) {
-        List<Object> args = new LinkedList<>();
-        StringBuilder q = new StringBuilder("SELECT API_REQ.ID_REQ, VA_API_URI, VA_API_MTH, VA_API_HDR, VA_API_BDY, VA_API_CHR,"
-                + " VA_API_NME, VA_API_DSC, VA_ASR_PRL, VA_ASR_STR, VA_ASR_ENB, VA_ASR_DBG, VA_ASR_EXL, VA_API_APP, VA_API_ENV"
-                + " FROM API_REQ INNER JOIN API_REQ_GRP ON API_REQ.ID_REQ = API_REQ_GRP.ID_REQ WHERE 1 = 1");
+    public List<ApiRequest> selectRequest(int[] ids, String app, Set<String> envs) {
 
-        if(!CollectionUtils.isEmpty(envs)) {
-            q.append(" AND VA_API_ENV IN ").append(inArgs(envs.size()));
-            args.addAll(envs);
-        }
+        List<Object> args = new LinkedList<>();
+        StringBuilder q = new StringBuilder("SELECT DISTINCT O_REQ.ID_REQ, VA_URI, VA_MTH, VA_HDR, VA_BDY,"
+                + " VA_NME, VA_DSC, VA_VRS, VA_PRL, VA_ENB, VA_STT, CNT_CMP"
+                + " FROM O_REQ"
+                + " INNER JOIN (SELECT ID_REQ, VA_APP, COUNT(ID_REQ) as nb FROM O_REQ_ENV WHERE 1 = 1");
 
         if(app != null) {
-            q.append(" AND VA_API_APP = ?");
+            q.append(" AND VA_APP = ?");
             args.add(app);
         }
 
+        if(!CollectionUtils.isEmpty(envs)) {
+            q.append(" AND VA_RLS IN ").append(inArgs(envs.size()));
+            args.addAll(envs);
+        }
+
+        q.append(" GROUP BY ID_REQ, VA_APP HAVING COUNT(ID_REQ) >= ?");
+        args.add(!CollectionUtils.isEmpty(envs) ? envs.size() : 0);
+        q.append(" ) as GRP ON GRP.ID_REQ = O_REQ.ID_REQ");
+
         if(ids != null) {
-            q.append(" AND API_REQ.ID_REQ IN ").append(inArgs(ids.length));
+            q.append(" WHERE O_REQ.ID_REQ IN ").append(inArgs(ids.length));
             for (int id : ids) {
                 args.add(id);
             }
         }
 
-        q.append(" ORDER BY API_REQ.VA_API_NME ASC");
+        q.append(" ORDER BY VA_NME ASC");
 
-        var list = template.query(q.toString(), args.toArray(), rs-> {
-            long actualId = 0;
-            List<ApiRequestServer> requestList = new ArrayList<>();
-            ApiRequestServer request = null;
-            while(rs.next()) {
-                long nextId = rs.getLong("ID_REQ");;
-                if(actualId != nextId) {
-                    actualId = nextId;
-                    try {
-                        var conf = new ExecutionConfig(
-                                rs.getBoolean("VA_ASR_ENB"),
-                                rs.getBoolean("VA_ASR_PRL")
-                        );
-                        ApiRequest apiRequest = new ApiRequest(
-                                actualId,
-                                rs.getString("VA_API_NME"),
-                                0, //TODO add version column
-                                rs.getString("VA_API_DSC"),
-                                rs.getString("VA_API_URI"),
-                                rs.getString("VA_API_MTH"),
-                                mapper.readValue(rs.getString("VA_API_HDR"), new TypeReference<Map<String, List<String>>>(){}),
-                                rs.getString("VA_API_BDY").getBytes(), 
-                                null,//TODO add acceptableStatus column
-                                null,// response config => json column
-                                conf,
-                                null, // stable reference
-                                null,
-                                null
-                        );
-                        var apiRequestGroup = new ApiRequestGroupServer(
-                                rs.getString("VA_API_APP"),
-                                rs.getString("VA_API_ENV")
-                        );
-                        List<ApiRequestGroupServer> requestGroupList = new ArrayList<>();
-                        requestGroupList.add(apiRequestGroup);
-                        request = new ApiRequestServer(
-                                apiRequest,
-                                requestGroupList
-                        );
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                    requestList.add(request);
-                } else {
-                    var apiRequestGroup = new ApiRequestGroupServer(
-                            rs.getString("VA_API_APP"),
-                            rs.getString("VA_API_ENV")
-                    );
-                    Objects.requireNonNull(request).getRequestGroupList().add(apiRequestGroup);
+        var list = template.query(q.toString(), args.toArray(), (rs, i) -> {
+
+            try {
+                ApiRequest request = new ApiRequest();
+                request.setId(rs.getLong("ID_REQ"));
+                request.setName(rs.getString("VA_NME"));
+                request.setVersion(rs.getInt("VA_VRS"));
+                request.setDescription(rs.getString("VA_DSC"));
+                request.setUri(rs.getString("VA_URI"));
+                request.setMethod(rs.getString("VA_MTH"));
+                request.setHeaders(mapper.readValue(rs.getString("VA_HDR"), new TypeReference<Map<String, List<String>>>(){}));
+                request.setBody(rs.getString("VA_BDY") != null ? rs.getString("VA_BDY").getBytes() : null);
+                request.setAccept(Stream.of(rs.getString("VA_STT").split(",")).mapToInt(Integer::parseInt).toArray());
+                request.setExecution(new ExecutionConfig(rs.getBoolean("VA_ENB"), rs.getBoolean("VA_PRL")));
+                if(rs.getString("CNT_CMP") != null) {
+                    request.setComparator(mapper.readValue(rs.getString("CNT_CMP"), new TypeReference<ModelComparator<?>>(){}));
                 }
+                return request;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
-            return requestList;
         });
-        log.info("app={}, env={} ==> {} requests", app, envs, Objects.requireNonNull(list).size());
+        log.info("app={}, env={} ==> {} requests", app, envs, list.size());
         return list;
     }
 
     @Override
-    public void insertRequest(long id, @NonNull ApiRequest req) {
+    public List<ApiRequestServer> selectRequest() {
+        var requests = selectRequest(null, null, null);
+        var requestServers = new ArrayList<ApiRequestServer>();
+        if(!CollectionUtils.isEmpty(requests)) {
+            template.query("SELECT ID_REQ, VA_APP, VA_RLS FROM O_REQ_ENV WHERE ID_REQ IN " + inArgs(requests.size()), requests.stream().map(ApiRequest::getId).toArray(Long[]::new), rs -> {
+                var id = rs.getLong("ID_REQ");
+                var requestServer = requestServers.stream().filter(r -> r.getRequest().getId() == id).findFirst();
+                if(requestServer.isPresent()) {
+                    requestServer.get().getReleases().add(rs.getString("VA_RLS"));
+                } else {
+                    requestServers.add(new ApiRequestServer(requests.stream().filter(r -> r.getId() == id).findFirst().orElseThrow(), rs.getString("VA_APP"), new ArrayList<>() {{add(rs.getString("VA_RLS"));}}));
+                }
+            });
+        }
+        return requestServers;
+    }
 
-        var q = "INSERT INTO API_REQ(ID_REQ, VA_API_URI, VA_API_MTH, VA_API_HDR, VA_API_BDY, VA_API_CHR, "
-                + "VA_API_NME, VA_API_DSC, "
-                + "VA_ASR_PRL, VA_ASR_STR, VA_ASR_ENB, VA_ASR_DBG, VA_ASR_EXL) "
-                + "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)";
+    @Override
+    public void insertRequest(int id, @NonNull ApiRequest req) {
+
+        var q = "INSERT INTO O_REQ(ID_REQ, VA_URI, VA_MTH, VA_HDR, VA_BDY,"
+                + " VA_NME, VA_DSC, VA_VRS, VA_PRL, VA_ENB, VA_STT, CNT_CMP)"
+                + " VALUES(?,?,?,?,?,?,?,?,?,?,?,?)";
         template.update(q, ps-> {
             try {
                 ps.setLong(1, id);
                 ps.setString(2, req.getUri());
                 ps.setString(3, req.getMethod());
                 ps.setString(4, mapper.writeValueAsString(req.getHeaders()));
-                ps.setString(5, new String(req.getBody()));
-                ps.setString(6, "UTF8"); //TODO remove this column
-                ps.setString(7, req.getName());
-                ps.setString(8, req.getDescription());
-                ps.setBoolean(9, req.getExecutionConfig().isParallel());
-                ps.setBoolean(10, false);//TODO remove this column
-                ps.setBoolean(11, req.getExecutionConfig().isEnabled());
-                ps.setBoolean(12, false); //TODO remove this column
-                ps.setString(13, mapper.writeValueAsString("[]"));  //TODO remove this column
-                //TODO add respConfig json column 
+                ps.setString(5, req.bodyAsString());
+                ps.setString(6, req.getName());
+                ps.setString(7, req.getDescription());
+                ps.setInt(8, req.getVersion() != null ? req.getVersion() : 1);
+                ps.setBoolean(9, req.getExecution().isParallel());
+                ps.setBoolean(10, req.getExecution().isEnabled());
+                ps.setString(11, Arrays.stream(req.getAccept()).mapToObj(String::valueOf).collect(Collectors.joining(",")));
+                ps.setString(12, isEmpty(req.getComparators()) ? null : mapper.writeValueAsString(req.getComparators()));
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
@@ -142,20 +137,25 @@ public class RequestDaoImpl implements RequestDao {
     }
 
     @Override
-    public void updateRequest(@NonNull ApiRequest req) {
+    public void updateRequest(int id, @NonNull ApiRequest req) {
 
-        var q = "UPDATE API_REQ SET VA_API_URI = ?, VA_API_MTH = ?, VA_API_BDY = ?, " +
-                "VA_API_NME = ?, VA_API_DSC = ?, VA_API_HDR = ? " +
-                "WHERE ID_REQ = ?";
+        var q = "UPDATE O_REQ SET VA_URI = ?, VA_MTH = ?, VA_BDY = ?, VA_NME = ?, VA_DSC = ?,"
+                + " VA_HDR = ?, VA_VRS = ?, VA_PRL = ?, VA_ENB = ?, VA_STT = ?, CNT_CMP = ?"
+                + " WHERE ID_REQ = ?";
         template.update(q, ps-> {
             try {
                 ps.setString(1, req.getUri());
                 ps.setString(2, req.getMethod());
-                ps.setString(3, new String(req.getBody()));
+                ps.setString(3, req.bodyAsString());
                 ps.setString(4, req.getName());
                 ps.setString(5, req.getDescription());
                 ps.setString(6, mapper.writeValueAsString(req.getHeaders()));
-                ps.setLong(7, req.getId());
+                ps.setInt(7, req.getVersion() != null ? req.getVersion() : 1);
+                ps.setBoolean(8, req.getExecution().isParallel());
+                ps.setBoolean(9, req.getExecution().isEnabled());
+                ps.setString(10, Arrays.stream(req.getAccept()).mapToObj(String::valueOf).collect(Collectors.joining(",")));
+                ps.setString(11, isEmpty(req.getComparators()) ? null : mapper.writeValueAsString(req.getComparators()));
+                ps.setLong(12, id);
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
@@ -164,39 +164,43 @@ public class RequestDaoImpl implements RequestDao {
     }
 
     @Override
-    public void deleteRequest(@NonNull int[] ids){
-        String q = "DELETE FROM API_REQ WHERE ID_REQ IN" + inArgs(ids.length);
+    public void deleteRequest(int[] ids){
+        String q = "DELETE FROM O_REQ WHERE ID_REQ IN " + inArgs(ids.length);
         template.update(q, ps-> {
             for(var i=0; i<ids.length; i++) {
-                ps.setInt(i+1, ids[i]);
+                ps.setLong(i+1, ids[i]);
             }
         });
         log.info("");
     }
 
     @Override
-    public void insertRequestGroup(long id, @NonNull List<ApiRequestGroupServer> requestGroupList) {
-        var q = "INSERT INTO API_REQ_GRP(ID_REQ, VA_API_APP, VA_API_ENV)"
+    public void insertRequestGroup(int id, @NonNull String app, @NonNull List<String> releases) {
+        var q = "INSERT INTO O_REQ_ENV(ID_REQ, VA_APP, VA_RLS)"
                 + " VALUES(?,?,?)";
-        template.batchUpdate(q, requestGroupList, requestGroupList.size(), (ps, r) -> {
+        template.batchUpdate(q, releases, releases.size(), (ps, r) -> {
             ps.setLong(1, id);
-            ps.setString(2, r.getApp());
-            ps.setString(3, r.getEnv());
+            ps.setString(2, app);
+            ps.setString(3, r);
         });
-        log.info("requestGroup added : {}", requestGroupList);
+        log.info("requestGroup added : app={}, envs={}", app, releases);
     }
 
     @Override
-    public void deleteRequestGroup(long id){
-        String q = "DELETE FROM API_REQ_GRP WHERE ID_REQ = ?";
-        template.update(q, ps-> ps.setLong(1, id));
+    public void deleteRequestGroup(int[] ids) {
+        String q = "DELETE FROM O_REQ_ENV WHERE ID_REQ IN " + inArgs(ids.length);
+        template.update(q, ps-> {
+            for(var i = 0; i < ids.length; i++) {
+                ps.setLong(i+1, ids[i]);
+            }
+        });
         log.info("");
     }
 
     @Override
-    public void updateState(@NonNull int[] ids, boolean state){
+    public void updateState(int[] ids, boolean state) {
 
-        String q = "UPDATE API_REQ SET VA_ASR_ENB = ? WHERE ID_REQ IN" + inArgs(ids.length);
+        String q = "UPDATE O_REQ SET VA_ENB = ? WHERE ID_REQ IN" + inArgs(ids.length);
         template.update(q, ps-> {
             ps.setBoolean(1, state);
             for(var i=0; i<ids.length; i++) {
@@ -206,8 +210,8 @@ public class RequestDaoImpl implements RequestDao {
     }
 
     @Override
-    public Long nextId(String col, String table) {
-        return template.query("SELECT MAX(" + col + ") FROM " + table,
-                rs-> rs.next() ? rs.getLong(1) : 0) + 1;
+    public Integer nextId(@NonNull String col, @NonNull String table) {
+        return requireNonNull(template.query("SELECT MAX(" + col + ") FROM " + table,
+                rs-> rs.next() ? rs.getInt(1) : 0)) + 1;
     }
 }

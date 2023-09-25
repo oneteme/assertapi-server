@@ -1,19 +1,18 @@
 package org.usf.assertapi.server.service;
 
-import static org.usf.assertapi.server.model.TraceGroupStatus.PENDING;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.usf.assertapi.core.ComparisonResult;
+import org.usf.assertapi.core.RuntimeEnvironement;
+import org.usf.assertapi.server.dao.TraceDao;
+import org.usf.assertapi.server.model.AssertionExecution;
+import org.usf.assertapi.server.model.AssertionResult;
+import org.usf.assertapi.server.model.ExecutionState;
 
 import java.util.List;
 
-import org.springframework.stereotype.Service;
-import org.usf.assertapi.core.RuntimeEnvironement;
-import org.usf.assertapi.core.ComparisonResult;
-import org.usf.assertapi.server.dao.TraceDao;
-import org.usf.assertapi.server.model.AssertionResultServer;
-import org.usf.assertapi.server.model.ApiTraceGroup;
-import org.usf.assertapi.server.model.TraceGroupStatus;
-
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import static org.usf.assertapi.server.model.ExecutionState.PENDING;
 
 @Service
 @RequiredArgsConstructor
@@ -22,8 +21,13 @@ public class TraceServiceImpl implements TraceService {
 	private final TraceDao dao;
 
     @Override
-    public List<AssertionResultServer> getTraces(long[] ids, List<String> status) {
+    public List<AssertionResult> get(long[] ids, List<String> status) {
         return dao.select(ids, status);
+    }
+
+    @Override
+    public List<AssertionExecution> get(Long id) {
+        return dao.select(id);
     }
 
     @Override
@@ -32,17 +36,14 @@ public class TraceServiceImpl implements TraceService {
     }
 
     @Override
-    public long register(String app, String stableRelease, String latestRelease, RuntimeEnvironement env) {
-        return dao.register(app, stableRelease, latestRelease, env, PENDING);
+    public long register(String app, String latestRelease, String stableRelease, RuntimeEnvironement env) {
+        return dao.register(app, latestRelease, stableRelease, env, PENDING);
     }
 
     @Override
-    public void updateStatus(long id, TraceGroupStatus status){ //TODO update must return new Object
+    public void updateStatus(long id, ExecutionState status){ //TODO update must return new Object
         dao.updateStatus(id, status);
     }
 
-    @Override
-    public List<ApiTraceGroup> getTraceGroups(Long id) {
-        return dao.selectTraceGroup(id);
-    }
+
 }

@@ -1,22 +1,25 @@
 package org.usf.assertapi.server.service;
 
-import org.springframework.transaction.annotation.Transactional;
+import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.server.model.ApiRequestServer;
 
 import java.util.List;
+import java.util.Set;
 
 public interface RequestService {
-    List<ApiRequestServer> getRequestList(int[] ids, List<String> envs, String app);
+    List<ApiRequest> getRequestList(int[] ids, String app, Set<String> envs);
 
-    ApiRequestServer getRequestOne(int id);
+    List<ApiRequestServer> getRequestList();
 
-    long addRequest(ApiRequestServer req);
+    ApiRequest getRequestOne(int id);
 
-    void updateRequest(ApiRequestServer req);
+    long addRequest(String app, List<String> releases, ApiRequest req);
 
-    @Transactional(rollbackFor = Exception.class)
+    long[] addRequestList(String app, List<String> releases, List<ApiRequest> requests);
+
+    void updateRequest(int id, String app, List<String> releases, ApiRequest req);
+
     void removeRequest(int[] ids);
 
-    @Transactional(rollbackFor = Exception.class)
     void updateState(int[] ids, boolean state);
 }
