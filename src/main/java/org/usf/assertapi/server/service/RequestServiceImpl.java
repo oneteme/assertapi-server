@@ -7,9 +7,10 @@ import org.usf.assertapi.core.ApiRequest;
 import org.usf.assertapi.server.dao.RequestDao;
 import org.usf.assertapi.server.exception.NotFoundException;
 import org.usf.assertapi.server.exception.TooManyResultException;
-import org.usf.assertapi.server.model.ApiMigration;
+import org.usf.assertapi.server.model.ApiRequestServer;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -17,8 +18,13 @@ public class RequestServiceImpl implements RequestService {
     private final RequestDao dao;
 
     @Override
-    public List<ApiRequest> getRequestList(int[] ids, String app, List<String> envs) {
+    public List<ApiRequest> getRequestList(int[] ids, String app, Set<String> envs) {
         return dao.selectRequest(ids, app, envs);
+    }
+
+    @Override
+    public List<ApiRequestServer> getRequestList() {
+        return dao.selectRequest();
     }
 
     @Override
@@ -55,8 +61,9 @@ public class RequestServiceImpl implements RequestService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateRequest(int id, String app, List<String> releases, ApiRequest req) {
+        int[] ids = {id};
         dao.updateRequest(id, req);
-        dao.deleteRequestGroup(id);
+        dao.deleteRequestGroup(ids);
         dao.insertRequestGroup(id, app, releases);
     }
 
@@ -64,6 +71,7 @@ public class RequestServiceImpl implements RequestService {
     @Transactional(rollbackFor = Exception.class)
     public void removeRequest(int[] ids){
         dao.deleteRequest(ids);
+        dao.deleteRequestGroup(ids);
     }
 
     @Override

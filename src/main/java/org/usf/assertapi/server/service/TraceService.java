@@ -3,15 +3,17 @@ package org.usf.assertapi.server.service;
 import lombok.NonNull;
 import org.usf.assertapi.core.ComparisonResult;
 import org.usf.assertapi.core.RuntimeEnvironement;
-import org.usf.assertapi.server.model.ApiTrace;
-import org.usf.assertapi.server.model.ApiTraceGroup;
+import org.usf.assertapi.server.model.AssertionExecution;
+import org.usf.assertapi.server.model.AssertionResult;
 import org.usf.assertapi.server.model.ExecutionState;
 
 import java.util.List;
 
 public interface TraceService {
 
-    List<ApiTrace> getTraces(long[] ids, List<String> status);
+    List<AssertionResult> get(long[] ids, List<String> status);
+
+    List<AssertionExecution> get(Long id);
 
     void addTrace(long idAsr, Long idReq, @NonNull ComparisonResult res);
 
@@ -19,5 +21,4 @@ public interface TraceService {
 
     void updateStatus(long id, ExecutionState status);
 
-    List<ApiTraceGroup> getTraceGroups(Long id);
 }

@@ -10,18 +10,19 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.CollectionUtils;
 import org.usf.assertapi.core.*;
-import org.usf.assertapi.server.model.ApiMigration;
+import org.usf.assertapi.server.model.ApiRequestServer;
+import org.usf.assertapi.server.utils.StringBuilder;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.sql.Array;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.nio.charset.StandardCharsets.*;
+import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNull;
-import static org.usf.assertapi.core.Utils.defaultMapper;
+import static org.usf.assertapi.core.Utils.*;
 import static org.usf.assertapi.server.utils.DaoUtils.inArgs;
 
 @Slf4j
@@ -33,21 +34,13 @@ public class RequestDaoImpl implements RequestDao {
     private final JdbcTemplate template;
 
     @Override
-    public List<ApiRequest> selectRequest(int[] ids, String app, List<String> envs) {
+    public List<ApiRequest> selectRequest(int[] ids, String app, Set<String> envs) {
+
         List<Object> args = new LinkedList<>();
         StringBuilder q = new StringBuilder("SELECT DISTINCT O_REQ.ID_REQ, VA_URI, VA_MTH, VA_HDR, VA_BDY,"
                 + " VA_NME, VA_DSC, VA_VRS, VA_PRL, VA_ENB, VA_STT, CNT_CMP"
                 + " FROM O_REQ"
-                + " INNER JOIN (SELECT ID_REQ, VA_APP, VA_RLS, COUNT(ID_REQ) as nb FROM O_REQ_ENV GROUP BY ID_REQ, VA_APP, VA_RLS HAVING nb >= ")
-                .append(!CollectionUtils.isEmpty(envs) ? envs.size() : 0)
-                .append(" ) as GRP ON GRP.ID_REQ = O_REQ.ID_REQ WHERE 1 = 1");
-
-        if(ids != null) {
-            q.append(" AND O_REQ.ID_REQ IN ").append(inArgs(ids.length));
-            for (int id : ids) {
-                args.add(id);
-            }
-        }
+                + " INNER JOIN (SELECT ID_REQ, VA_APP, COUNT(ID_REQ) as nb FROM O_REQ_ENV WHERE 1 = 1");
 
         if(app != null) {
             q.append(" AND VA_APP = ?");
@@ -57,6 +50,17 @@ public class RequestDaoImpl implements RequestDao {
         if(!CollectionUtils.isEmpty(envs)) {
             q.append(" AND VA_RLS IN ").append(inArgs(envs.size()));
             args.addAll(envs);
+        }
+
+        q.append(" GROUP BY ID_REQ, VA_APP HAVING COUNT(ID_REQ) >= ?");
+        args.add(!CollectionUtils.isEmpty(envs) ? envs.size() : 0);
+        q.append(" ) as GRP ON GRP.ID_REQ = O_REQ.ID_REQ");
+
+        if(ids != null) {
+            q.append(" WHERE O_REQ.ID_REQ IN ").append(inArgs(ids.length));
+            for (int id : ids) {
+                args.add(id);
+            }
         }
 
         q.append(" ORDER BY VA_NME ASC");
@@ -75,7 +79,9 @@ public class RequestDaoImpl implements RequestDao {
                 request.setBody(rs.getString("VA_BDY") != null ? rs.getString("VA_BDY").getBytes() : null);
                 request.setAccept(Stream.of(rs.getString("VA_STT").split(",")).mapToInt(Integer::parseInt).toArray());
                 request.setExecution(new ExecutionConfig(rs.getBoolean("VA_ENB"), rs.getBoolean("VA_PRL")));
-                request.setComparator(mapper.readValue(rs.getString("CNT_CMP"), new TypeReference<ModelComparator<?>>(){}));
+                if(rs.getString("CNT_CMP") != null) {
+                    request.setComparator(mapper.readValue(rs.getString("CNT_CMP"), new TypeReference<ModelComparator<?>>(){}));
+                }
                 return request;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -83,6 +89,24 @@ public class RequestDaoImpl implements RequestDao {
         });
         log.info("app={}, env={} ==> {} requests", app, envs, list.size());
         return list;
+    }
+
+    @Override
+    public List<ApiRequestServer> selectRequest() {
+        var requests = selectRequest(null, null, null);
+        var requestServers = new ArrayList<ApiRequestServer>();
+        if(!CollectionUtils.isEmpty(requests)) {
+            template.query("SELECT ID_REQ, VA_APP, VA_RLS FROM O_REQ_ENV WHERE ID_REQ IN " + inArgs(requests.size()), requests.stream().map(ApiRequest::getId).toArray(Long[]::new), rs -> {
+                var id = rs.getLong("ID_REQ");
+                var requestServer = requestServers.stream().filter(r -> r.getRequest().getId() == id).findFirst();
+                if(requestServer.isPresent()) {
+                    requestServer.get().getReleases().add(rs.getString("VA_RLS"));
+                } else {
+                    requestServers.add(new ApiRequestServer(requests.stream().filter(r -> r.getId() == id).findFirst().orElseThrow(), rs.getString("VA_APP"), new ArrayList<>() {{add(rs.getString("VA_RLS"));}}));
+                }
+            });
+        }
+        return requestServers;
     }
 
     @Override
@@ -97,14 +121,14 @@ public class RequestDaoImpl implements RequestDao {
                 ps.setString(2, req.getUri());
                 ps.setString(3, req.getMethod());
                 ps.setString(4, mapper.writeValueAsString(req.getHeaders()));
-                ps.setString(5, req.getBody() != null ? new String(req.getBody(), UTF_8) : null);
+                ps.setString(5, req.bodyAsString());
                 ps.setString(6, req.getName());
                 ps.setString(7, req.getDescription());
-                ps.setInt(8, req.getVersion());
+                ps.setInt(8, req.getVersion() != null ? req.getVersion() : 1);
                 ps.setBoolean(9, req.getExecution().isParallel());
                 ps.setBoolean(10, req.getExecution().isEnabled());
                 ps.setString(11, Arrays.stream(req.getAccept()).mapToObj(String::valueOf).collect(Collectors.joining(",")));
-                ps.setString(12, mapper.writeValueAsString(req.getComparators()));
+                ps.setString(12, isEmpty(req.getComparators()) ? null : mapper.writeValueAsString(req.getComparators()));
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
@@ -122,15 +146,15 @@ public class RequestDaoImpl implements RequestDao {
             try {
                 ps.setString(1, req.getUri());
                 ps.setString(2, req.getMethod());
-                ps.setString(3, new String(req.getBody(), UTF_8));
+                ps.setString(3, req.bodyAsString());
                 ps.setString(4, req.getName());
                 ps.setString(5, req.getDescription());
                 ps.setString(6, mapper.writeValueAsString(req.getHeaders()));
-                ps.setInt(7, req.getVersion());
+                ps.setInt(7, req.getVersion() != null ? req.getVersion() : 1);
                 ps.setBoolean(8, req.getExecution().isParallel());
                 ps.setBoolean(9, req.getExecution().isEnabled());
-                ps.setString(10, Arrays.toString(req.getAccept()));
-                ps.setString(11, mapper.writeValueAsString(req.getComparators()));
+                ps.setString(10, Arrays.stream(req.getAccept()).mapToObj(String::valueOf).collect(Collectors.joining(",")));
+                ps.setString(11, isEmpty(req.getComparators()) ? null : mapper.writeValueAsString(req.getComparators()));
                 ps.setLong(12, id);
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
@@ -141,7 +165,7 @@ public class RequestDaoImpl implements RequestDao {
 
     @Override
     public void deleteRequest(int[] ids){
-        String q = "DELETE FROM O_REQ WHERE ID_REQ IN" + inArgs(ids.length);
+        String q = "DELETE FROM O_REQ WHERE ID_REQ IN " + inArgs(ids.length);
         template.update(q, ps-> {
             for(var i=0; i<ids.length; i++) {
                 ps.setLong(i+1, ids[i]);
@@ -163,9 +187,13 @@ public class RequestDaoImpl implements RequestDao {
     }
 
     @Override
-    public void deleteRequestGroup(int id) {
-        String q = "DELETE FROM O_REQ_ENV WHERE ID_REQ = ?";
-        template.update(q, ps-> ps.setLong(1, id));
+    public void deleteRequestGroup(int[] ids) {
+        String q = "DELETE FROM O_REQ_ENV WHERE ID_REQ IN " + inArgs(ids.length);
+        template.update(q, ps-> {
+            for(var i = 0; i < ids.length; i++) {
+                ps.setLong(i+1, ids[i]);
+            }
+        });
         log.info("");
     }
 

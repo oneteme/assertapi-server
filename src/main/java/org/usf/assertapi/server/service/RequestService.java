@@ -1,11 +1,15 @@
 package org.usf.assertapi.server.service;
 
 import org.usf.assertapi.core.ApiRequest;
+import org.usf.assertapi.server.model.ApiRequestServer;
 
 import java.util.List;
+import java.util.Set;
 
 public interface RequestService {
-    List<ApiRequest> getRequestList(int[] ids, String app, List<String> envs);
+    List<ApiRequest> getRequestList(int[] ids, String app, Set<String> envs);
+
+    List<ApiRequestServer> getRequestList();
 
     ApiRequest getRequestOne(int id);
 

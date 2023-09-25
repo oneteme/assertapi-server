@@ -82,13 +82,11 @@ public class EnvironmentDaoImpl implements EnvironmentDao {
             try {
                 ps.setString(1, environment.getServerConfig().getHost());
                 ps.setInt(2, environment.getServerConfig().getPort());
-                ps.setString(3, environment.getServerConfig().getAuth() != null ? environment.getServerConfig().getAuth().getAccessTokenUrl() : null);
-                ps.setString(4, environment.getServerConfig().getAuth() != null ? environment.getServerConfig().getAuth().getAuthMethod() : null);
-                ps.setString(5, environment.getApp());
-                ps.setString(6, environment.getRelease());
-                ps.setBoolean(7, environment.isProd());
-                ps.setString(8, mapper.writeValueAsString(environment.getServerConfig().getAuth()));
-                ps.setLong(9, environment.getId());
+                ps.setString(3, environment.getApp());
+                ps.setString(4, environment.getRelease());
+                ps.setBoolean(5, environment.isProd());
+                ps.setString(6, mapper.writeValueAsString(environment.getServerConfig().getAuth()));
+                ps.setLong(7, environment.getId());
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }

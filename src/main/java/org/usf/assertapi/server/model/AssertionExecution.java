@@ -9,7 +9,7 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 @Setter
 @Getter
 @JsonInclude(NON_NULL)
-public class ApiTraceGroup extends ApiTraceStatistic {
+public class AssertionExecution extends AssertionStatistic {
     private final Long id;
     private final String user;
     private final String os;
@@ -21,8 +21,8 @@ public class ApiTraceGroup extends ApiTraceStatistic {
     private final String latestRelease;
     private final ExecutionState status;
 
-    public ApiTraceGroup(Long id, String user, String os, String address, String jre, String branch, String app, String stableRelease, String latestRelease, ExecutionState status, int nbTest, int nbTestSkip) {
-        super(nbTest, nbTestSkip);
+    public AssertionExecution(Long id, String user, String os, String address, String jre, String branch, String app, String stableRelease, String latestRelease, ExecutionState status, int nbTest) {
+        super(nbTest);
         this.id = id;
         this.user = user;
         this.os = os;
@@ -35,8 +35,8 @@ public class ApiTraceGroup extends ApiTraceStatistic {
         this.status = status;
     }
 
-    public ApiTraceGroup(Long id, String user, String os, String address, String jre, String branch, String app, String stableRelease, String latestRelease, ExecutionState status, int nbTest, int nbTestSkip, int nbTestOk, int nbTestKo) {
-        super(nbTest, nbTestSkip, nbTestOk, nbTestKo);
+    public AssertionExecution(Long id, String user, String os, String address, String jre, String branch, String app, String stableRelease, String latestRelease, ExecutionState status, int nbTest, int nbTestSkip, int nbTestOk, int nbTestKo, int nbTestFail) {
+        super(nbTest, nbTestSkip, nbTestOk, nbTestKo, nbTestFail);
         this.id = id;
         this.user = user;
         this.os = os;

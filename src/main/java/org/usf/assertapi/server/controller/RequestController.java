@@ -3,10 +3,13 @@ package org.usf.assertapi.server.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.usf.assertapi.core.ApiRequest;
+import org.usf.assertapi.server.model.ApiRequestServer;
 import org.usf.assertapi.server.service.RequestService;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @CrossOrigin
 @RestController
@@ -20,8 +23,14 @@ public class RequestController {
     public List<ApiRequest> get(
             @RequestParam(name="id", required = false) int[] ids,
             @RequestParam(name="app", required = false) String app,
-            @RequestParam(name="env", required = false) List<String> envs) {
-        return service.getRequestList(ids, app, envs != null ? envs : new ArrayList<>());
+            @RequestParam(name="env", required = false) Set<String> envs) {
+        return service.getRequestList(ids, app, envs != null ? envs : new HashSet<>());
+    }
+
+    @GetMapping("ihm")
+    public List<ApiRequestServer> get() {
+
+        return service.getRequestList();
     }
 
     @PutMapping //TODO put env + app in path no => delete  ApiRequestServer

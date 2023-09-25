@@ -3,8 +3,8 @@ package org.usf.assertapi.server.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.usf.assertapi.core.ComparisonResult;
-import org.usf.assertapi.server.model.ApiTrace;
-import org.usf.assertapi.server.model.ApiTraceGroup;
+import org.usf.assertapi.server.model.AssertionExecution;
+import org.usf.assertapi.server.model.AssertionResult;
 import org.usf.assertapi.server.service.TraceService;
 
 import java.util.List;
@@ -17,10 +17,15 @@ public class TraceController {
     
 	private final TraceService service;
 
-    @GetMapping
-    public List<ApiTrace> get(@RequestParam(name="id", required = false) long[] ids,
-                              @RequestParam(name = "status", required = false) List<String> status) {
-        return service.getTraces(ids, status);
+    @GetMapping("assertion_result")
+    public List<AssertionResult> get(@RequestParam(name="id", required = false) long[] ids,
+                                     @RequestParam(name = "status", required = false) List<String> status) {
+        return service.get(ids, status);
+    }
+
+    @GetMapping("assertion_execution")
+    public List<AssertionExecution> get(@RequestParam(name="asrID", required = false) Long id) {
+        return service.get(id);
     }
 
     @PutMapping("{asrID}/api/{reqID}")
@@ -28,10 +33,5 @@ public class TraceController {
                     @PathVariable("reqID") long idReq,
                     @RequestBody ComparisonResult result) {
         service.addTrace(idAsr, idReq, result);
-    }
-
-    @GetMapping("group")
-    public List<ApiTraceGroup> get(@RequestParam(name="asrID", required = false) Long id) {
-        return service.getTraceGroups(id);
     }
 }
