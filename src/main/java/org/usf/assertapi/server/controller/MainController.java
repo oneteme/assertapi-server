@@ -99,7 +99,7 @@ public class MainController {
 				});*/
 
 		new ApiAssertionFactory()
-				.comparing(config.getLatestRelease(), config.getStableRelease())
+				.comparing(config.getStableRelease(), config.getLatestRelease())
 				.trace((r, e)-> {
 					traceService.addTrace(id, r.getId(), e);
 				})
@@ -182,11 +182,13 @@ public class MainController {
 				runResponseComparator.setStep(getCurrentStage());
 			}
 		};
-		new ApiAssertionFactory()
-				.comparing(config.stableRelease, config.latestRelease)
-				.using(assertions)
-				.build()
-				.assertApi(request);
+		try {
+			new ApiAssertionFactory()
+					.comparing(config.stableRelease, config.latestRelease)
+					.using(assertions)
+					.build()
+					.assertApi(request);
+		} catch(AssertionError e) {}
 		return runResponseComparator;
 	}
 
