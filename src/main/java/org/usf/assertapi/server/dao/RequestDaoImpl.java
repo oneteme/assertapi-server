@@ -63,7 +63,7 @@ public class RequestDaoImpl implements RequestDao {
             }
         }
 
-        q.append(" ORDER BY VA_NME ASC");
+        q.append(" ORDER BY VA_NME, VA_DSC ASC");
 
         var list = template.query(q.toString(), args.toArray(), (rs, i) -> {
 
